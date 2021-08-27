@@ -1,9 +1,9 @@
 <?php
 
-namespace Lagdo\Adminer\Driver\Sqlite\Sqlite;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Sqlite;
 
-use Lagdo\Adminer\Driver\Db\Connection as AbstractConnection;
-use Lagdo\Adminer\Driver\Sqlite\ConnectionTrait;
+use Lagdo\DbAdmin\Driver\Db\Connection as AbstractConnection;
+use Lagdo\DbAdmin\Driver\Sqlite\ConnectionTrait;
 
 use SQLite3;
 

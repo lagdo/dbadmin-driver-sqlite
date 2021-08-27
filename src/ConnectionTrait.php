@@ -1,6 +1,6 @@
 <?php
 
-namespace Lagdo\Adminer\Driver\Sqlite;
+namespace Lagdo\DbAdmin\Driver\Sqlite;
 
 trait ConnectionTrait
 {

@@ -1,9 +1,9 @@
 <?php
 
-namespace Lagdo\Adminer\Driver\Sqlite\Pdo;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Pdo;
 
-use Lagdo\Adminer\Driver\Db\Pdo\Connection as PdoConnection;
-use Lagdo\Adminer\Driver\Sqlite\ConnectionTrait;
+use Lagdo\DbAdmin\Driver\Db\Pdo\Connection as PdoConnection;
+use Lagdo\DbAdmin\Driver\Sqlite\ConnectionTrait;
 
 class Connection extends PdoConnection
 {

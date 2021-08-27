@@ -1,12 +1,12 @@
 <?php
 
-namespace Lagdo\Adminer\Driver\Sqlite\Tests;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Exception;
 
 /**
- * @covers Lagdo\Adminer\Driver\Sqlite\Server
+ * @covers Lagdo\DbAdmin\Driver\Sqlite\Server
  */
 final class ServerTest extends TestCase
 {

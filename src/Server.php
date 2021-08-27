@@ -1,8 +1,8 @@
 <?php
 
-namespace Lagdo\Adminer\Driver\Sqlite;
+namespace Lagdo\DbAdmin\Driver\Sqlite;
 
-use Lagdo\Adminer\Driver\Db\Server as AbstractServer;
+use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
 
 use Exception;
 

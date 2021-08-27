@@ -1,8 +1,8 @@
 <?php
 
-namespace Lagdo\Adminer\Driver\Sqlite;
+namespace Lagdo\DbAdmin\Driver\Sqlite;
 
-use Lagdo\Adminer\Driver\Db\Driver as AbstractDriver;
+use Lagdo\DbAdmin\Driver\Db\Driver as AbstractDriver;
 
 class Driver extends AbstractDriver
 {

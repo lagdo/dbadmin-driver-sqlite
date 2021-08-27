@@ -1,6 +1,6 @@
 <?php
 
-namespace Lagdo\Adminer\Driver\Sqlite\Sqlite;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Sqlite;
 
 class Statement
 {
