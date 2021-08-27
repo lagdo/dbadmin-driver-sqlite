@@ -1,2 +1,2 @@
 # dbadmin-driver-sqlite
-DbAdmi drivers for SqLite.
+DbAdmin drivers for SqLite.
