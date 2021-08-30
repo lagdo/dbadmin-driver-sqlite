@@ -31,15 +31,15 @@ class Connection extends AbstractConnection
     public function query($query, $unbuffered = false)
     {
         $result = @$this->client->query($query);
-        $this->error = "";
+        $this->db->setError();
         if (!$result) {
-            $this->errno = $this->client->lastErrorCode();
-            $this->error = $this->client->lastErrorMsg();
+            $this->db->setErrno($this->client->lastErrorCode());
+            $this->db->setError($this->client->lastErrorMsg());
             return false;
         } elseif ($result->numColumns()) {
             return new Statement($result);
         }
-        $this->affected_rows = $this->client->changes();
+        $this->db->setAffectedRows($this->client->changes());
         return true;
     }
 

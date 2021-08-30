@@ -245,7 +245,7 @@ class Server extends AbstractServer
         // avoid creating PHP files on unsecured servers
         $extensions = "db|sdb|sqlite";
         if (!preg_match("~^[^\\0]*\\.($extensions)\$~", $name)) {
-            $this->connection->error = $this->util->lang('Please use one of the extensions %s.', str_replace("|", ", ", $extensions));
+            $this->db->setError($this->util->lang('Please use one of the extensions %s.', str_replace("|", ", ", $extensions)));
             return false;
         }
         return true;
@@ -254,7 +254,7 @@ class Server extends AbstractServer
     public function create_database($db, $collation)
     {
         if (file_exists($db)) {
-            $this->connection->error = $this->util->lang('File exists.');
+            $this->db->setError($this->util->lang('File exists.'));
             return false;
         }
         if (!check_sqlite_name($db)) {
@@ -263,7 +263,7 @@ class Server extends AbstractServer
         try {
             $link = new Min_SQLite($db);
         } catch (Exception $ex) {
-            $this->connection->error = $ex->getMessage();
+            $this->db->setError($ex->getMessage());
             return false;
         }
         $link->query('PRAGMA encoding = "UTF-8"');
@@ -277,7 +277,7 @@ class Server extends AbstractServer
         $this->connection->__construct(":memory:"); // to unlock file, doesn't work in PDO on Windows
         foreach ($databases as $db) {
             if (!@unlink($db)) {
-                $this->connection->error = $this->util->lang('File exists.');
+                $this->db->setError($this->util->lang('File exists.'));
                 return false;
             }
         }
@@ -290,7 +290,7 @@ class Server extends AbstractServer
             return false;
         }
         $this->connection->__construct(":memory:");
-        $this->connection->error = $this->util->lang('File exists.');
+        $this->db->setError($this->util->lang('File exists.'));
         return @rename($this->current_db(), $name);
     }
 
@@ -333,7 +333,7 @@ class Server extends AbstractServer
         if ($auto_increment) {
             $this->db->queries("BEGIN");
             $this->db->queries("UPDATE sqlite_sequence SET seq = $auto_increment WHERE name = " . $this->q($name)); // ignores error
-            if (!$this->connection->affected_rows) {
+            if (!$this->db->affectedRows()) {
                 $this->db->queries("INSERT INTO sqlite_sequence (name, seq) VALUES (" . $this->q($name) . ", $auto_increment)");
             }
             $this->db->queries("COMMIT");
@@ -405,7 +405,7 @@ class Server extends AbstractServer
         $fields = array_merge($fields, array_filter($foreign));
         $temp_name = ($table == $name ? "adminer_$name" : $name);
         if (!$this->db->queries("CREATE TABLE " . $this->table($temp_name) . " (\n" . implode(",\n", $fields) . "\n)")) {
-            // implicit ROLLBACK to not overwrite $this->connection->error
+            // implicit ROLLBACK to not overwrite $this->db->error()
             return false;
         }
         if ($table != "") {
