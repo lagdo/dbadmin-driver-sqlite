@@ -17,8 +17,15 @@ class Connection extends AbstractConnection
     public function open($filename, array $options)
     {
         $this->client = new SQLite3($filename);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getServerInfo()
+    {
         $version = $this->client->version();
-        $this->server_info = $version["versionString"];
+        return $version["versionString"];
     }
 
     public function query($query, $unbuffered = false)
