@@ -45,13 +45,13 @@ class Connection extends AbstractConnection
 
     public function quote($string)
     {
-        return ($this->util->is_utf8($string)
+        return ($this->util->isUtf8($string)
             ? "'" . $this->client->escapeString($string) . "'"
             : "x'" . reset(unpack('H*', $string)) . "'"
         );
     }
 
-    public function store_result($result = null)
+    public function storedResult($result = null)
     {
         return $this->_result;
     }

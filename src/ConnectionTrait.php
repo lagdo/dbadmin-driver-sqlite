@@ -9,7 +9,7 @@ trait ConnectionTrait
     //     $this->query("PRAGMA foreign_keys = 1");
     // }
 
-    public function select_db($filename)
+    public function selectDatabase($filename)
     {
         // Only one database at once on this version.
         return true;
@@ -24,12 +24,12 @@ trait ConnectionTrait
         // return false;
     }
 
-    public function multi_query($query)
+    public function multiQuery($query)
     {
         return $this->_result = $this->query($query);
     }
 
-    public function next_result()
+    public function nextResult()
     {
         return false;
     }

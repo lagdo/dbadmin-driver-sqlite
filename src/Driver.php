@@ -6,7 +6,7 @@ use Lagdo\DbAdmin\Driver\Db\Driver as AbstractDriver;
 
 class Driver extends AbstractDriver
 {
-    public function insertUpdate($table, $rows, $primary)
+    public function insertOrUpdate($table, $rows, $primary)
     {
         $values = [];
         foreach ($rows as $set) {
