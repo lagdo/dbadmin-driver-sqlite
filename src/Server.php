@@ -84,7 +84,7 @@ class Server extends AbstractServer
 
     public function databaseCollation($db, $collations)
     {
-        return $this->connection->result("PRAGMA encoding"); // there is no database list so $db == $this->currentDatabase()
+        return $this->connection->result("PRAGMA encoding"); // there is no database list so $db == $this->selectedDatabase()
     }
 
     public function loggedUser()
@@ -291,7 +291,7 @@ class Server extends AbstractServer
         }
         $this->connection->__construct(":memory:");
         $this->db->setError($this->util->lang('File exists.'));
-        return @rename($this->currentDatabase(), $name);
+        return @rename($this->selectedDatabase(), $name);
     }
 
     public function autoIncrement()
