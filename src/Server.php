@@ -11,7 +11,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function getName()
+    public function name()
     {
         return "SQLite 3";
     }
@@ -41,7 +41,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function getConnection()
+    public function connection()
     {
         list($filename, $options) = $this->db->options();
         if ($options['password'] != "") {
