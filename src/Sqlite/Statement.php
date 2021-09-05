@@ -2,9 +2,11 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Sqlite;
 
+use Lagdo\DbAdmin\Driver\Db\StatementInterface;
+
 use SQLite3Result;
 
-class Statement
+class Statement implements StatementInterface
 {
     /**
      * The query result
@@ -30,19 +32,20 @@ class Statement
     public function __construct($result)
     {
         $this->result = $result;
+        $this->numRows = $result->numColumns();
     }
 
-    public function fetch_assoc()
+    public function fetchAssoc()
     {
         return $this->result->fetchArray(SQLITE3_ASSOC);
     }
 
-    public function fetch_row()
+    public function fetchRow()
     {
         return $this->result->fetchArray(SQLITE3_NUM);
     }
 
-    public function fetch_field()
+    public function fetchField()
     {
         $column = $this->offset++;
         $type = $this->result->columnType($column);
