@@ -3,6 +3,7 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Db\StatementInterface;
+use Lagdo\DbAdmin\Driver\Db\StatementField;
 
 use SQLite3Result;
 
@@ -29,33 +30,47 @@ class Statement implements StatementInterface
      */
     public $numRows;
 
+    /**
+     * The constructor
+     *
+     * @param SQLite3Result $result
+     */
     public function __construct($result)
     {
         $this->result = $result;
         $this->numRows = $result->numColumns();
     }
 
+    /**
+     * @inheritDoc
+     */
     public function fetchAssoc()
     {
         return $this->result->fetchArray(SQLITE3_ASSOC);
     }
 
+    /**
+     * @inheritDoc
+     */
     public function fetchRow()
     {
         return $this->result->fetchArray(SQLITE3_NUM);
     }
 
+    /**
+     * @inheritDoc
+     */
     public function fetchField()
     {
         $column = $this->offset++;
         $type = $this->result->columnType($column);
-        return (object) array(
-            "name" => $this->result->columnName($column),
-            "type" => $type,
-            "charsetnr" => ($type == SQLITE3_BLOB ? 63 : 0), // 63 - binary
-        );
+        $name = $this->result->columnName($column);
+        return new StatementField($type, $type === SQLITE3_BLOB, $name, $name);
     }
 
+    /**
+     * The destructor
+     */
     public function __destruct()
     {
         return $this->result->finalize();
