@@ -17,6 +17,7 @@ class Connection extends AbstractConnection
     public function open($filename, array $options)
     {
         $this->client = new SQLite3($filename);
+        return true;
     }
 
     /**

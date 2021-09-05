@@ -19,40 +19,37 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    protected function createConnection()
+    public function connect()
     {
-        if (($this->connection)) {
-            // Do not create if it already exists
-            return;
-        }
+        // if (($this->connection)) {
+        //     // Do not create if it already exists
+        //     return;
+        // }
 
-        if (class_exists("SQLite3")) {
-            $this->connection = new Sqlite\Connection($this->db, $this->util, $this, 'SQLite3');
-        }
-        elseif (extension_loaded("pdo_sqlite")) {
-            $this->connection = new Pdo\Connection($this->db, $this->util, $this, 'PDO_SQLite');
-        }
-
-        if($this->connection !== null) {
-            $this->driver = new Driver($this->db, $this->util, $this, $this->connection);
-        }
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function connection()
-    {
         list($filename, $options) = $this->db->options();
         if ($options['password'] != "") {
-            return $this->util->lang('Database does not support password.');
-        }
-        if (!$this->connection) {
-            return null;
+            throw new AuthException($this->util->lang('Database does not support password.'));
         }
 
-        $this->connection->open($filename, $options);
-        return $this->connection;
+        $connection = null;
+        if (class_exists("SQLite3")) {
+            $connection = new Sqlite\Connection($this->db, $this->util, $this, 'SQLite3');
+        }
+        elseif (extension_loaded("pdo_sqlite")) {
+            $connection = new Pdo\Connection($this->db, $this->util, $this, 'PDO_SQLite');
+        }
+        else {
+            throw new AuthException($this->util->lang('No package installed to open a Sqlite database.'));
+        }
+
+        if ($this->connection === null) {
+            $this->connection = $connection;
+            $this->driver = new Driver($this->db, $this->util, $this, $connection);
+        }
+
+        $connection->open($filename, $options);
+
+        return $connection;
     }
 
     /**
