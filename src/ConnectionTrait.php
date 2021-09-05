@@ -26,7 +26,7 @@ trait ConnectionTrait
 
     public function multiQuery($query)
     {
-        return $this->_result = $this->query($query);
+        return $this->result = $this->query($query);
     }
 
     public function nextResult()

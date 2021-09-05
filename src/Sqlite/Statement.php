@@ -2,57 +2,59 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Sqlite;
 
+use SQLite3Result;
+
 class Statement
 {
     /**
-     * Undocumented variable
+     * The query result
      *
-     * @var object
+     * @var SQLite3Result
      */
-    public $_result;
+    public $result;
 
     /**
      * Undocumented variable
      *
      * @var int
      */
-    public $_offset = 0;
+    public $offset = 0;
 
     /**
      * Undocumented variable
      *
      * @var int
      */
-    public $num_rows;
+    public $numRows;
 
     public function __construct($result)
     {
-        $this->_result = $result;
+        $this->result = $result;
     }
 
     public function fetch_assoc()
     {
-        return $this->_result->fetchArray(SQLITE3_ASSOC);
+        return $this->result->fetchArray(SQLITE3_ASSOC);
     }
 
     public function fetch_row()
     {
-        return $this->_result->fetchArray(SQLITE3_NUM);
+        return $this->result->fetchArray(SQLITE3_NUM);
     }
 
     public function fetch_field()
     {
-        $column = $this->_offset++;
-        $type = $this->_result->columnType($column);
+        $column = $this->offset++;
+        $type = $this->result->columnType($column);
         return (object) array(
-            "name" => $this->_result->columnName($column),
+            "name" => $this->result->columnName($column),
             "type" => $type,
             "charsetnr" => ($type == SQLITE3_BLOB ? 63 : 0), // 63 - binary
         );
     }
 
-    public function __desctruct()
+    public function __destruct()
     {
-        return $this->_result->finalize();
+        return $this->result->finalize();
     }
 }

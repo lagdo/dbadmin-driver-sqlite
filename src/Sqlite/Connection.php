@@ -23,7 +23,7 @@ class Connection extends AbstractConnection
     /**
      * @inheritDoc
      */
-    public function getServerInfo()
+    public function serverInfo()
     {
         $version = $this->client->version();
         return $version["versionString"];
@@ -54,7 +54,7 @@ class Connection extends AbstractConnection
 
     public function storedResult($result = null)
     {
-        return $this->_result;
+        return $this->result;
     }
 
     public function result($query, $field = 0)
@@ -63,7 +63,7 @@ class Connection extends AbstractConnection
         if (!is_object($result)) {
             return false;
         }
-        $row = $result->_result->fetchArray();
+        $row = $result->result->fetchArray();
         return $row[$field];
     }
 }
