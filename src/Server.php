@@ -11,6 +11,13 @@ use Exception;
 class Server extends AbstractServer
 {
     /**
+     * The database file extensions
+     *
+     * @var string
+     */
+    protected $extensions = "db|sdb|sqlite";
+
+    /**
      * @inheritDoc
      */
     public function name()
@@ -28,7 +35,7 @@ class Server extends AbstractServer
      */
     private function filename($database, $options)
     {
-        return rtrim($options['directory'], '/\\') . "/$database.sdb";
+        return rtrim($options['directory'], '/\\') . "/$database";
     }
 
     /**
@@ -87,12 +94,12 @@ class Server extends AbstractServer
         // Iterate on dir content
         foreach($iterator as $file)
         {
-            // skip everything except PHP files
-            if(!$file->isFile() || $file->getExtension() != 'sdb')
+            // Skip everything except Sqlite files
+            if(!$file->isFile() || !$this->checkSqliteName($filename = $file->getFilename()))
             {
                 continue;
             }
-            $databases[] = $file->getBasename('.sdb');
+            $databases[] = $filename;
         }
         return $databases;
     }
@@ -292,13 +299,8 @@ class Server extends AbstractServer
 
     private function checkSqliteName($name)
     {
-        // avoid creating PHP files on unsecured servers
-        $extensions = "db|sdb|sqlite";
-        if (!preg_match("~^[^\\0]*\\.($extensions)\$~", $name)) {
-            $this->db->setError($this->util->lang('Please use one of the extensions %s.', str_replace("|", ", ", $extensions)));
-            return false;
-        }
-        return true;
+        // Avoid creating PHP files on unsecured servers
+        return preg_match("~^[^\\0]*\\.({$this->extensions})\$~", $name);
     }
 
     public function createDatabase($database, $collation)
@@ -310,6 +312,8 @@ class Server extends AbstractServer
             return false;
         }
         if (!$this->checkSqliteName($filename)) {
+            $this->db->setError($this->util->lang('Please use one of the extensions %s.',
+                str_replace("|", ", ", $this->extensions)));
             return false;
         }
         try {
@@ -343,6 +347,8 @@ class Server extends AbstractServer
         list(, $options) = $this->db->options();
         $filename = $this->filename($database, $options);
         if (!$this->checkSqliteName($filename)) {
+            $this->db->setError($this->util->lang('Please use one of the extensions %s.',
+                str_replace("|", ", ", $this->extensions)));
             return false;
         }
         $this->db->setError($this->util->lang('File exists.'));
