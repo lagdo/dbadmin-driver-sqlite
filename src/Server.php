@@ -3,6 +3,7 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
+use Lagdo\DbAdmin\Driver\Db\TableField;
 
 use DirectoryIterator;
 use Exception;
@@ -170,34 +171,39 @@ class Server extends AbstractServer
             $name = $row["name"];
             $type = strtolower($row["type"]);
             $default = $row["dflt_value"];
-            $fields[$name] = array(
-                "field" => $name,
-                "type" => (preg_match('~int~i', $type) ? "integer" : (preg_match('~char|clob|text~i', $type) ?
-                    "text" : (preg_match('~blob~i', $type) ? "blob" : (preg_match('~real|floa|doub~i', $type) ?
-                    "real" : "numeric")))),
-                "full_type" => $type,
-                "default" => (preg_match("~'(.*)'~", $default, $match) ? str_replace("''", "'", $match[1]) :
-                    ($default == "NULL" ? null : $default)),
-                "null" => !$row["notnull"],
-                "privileges" => array("select" => 1, "insert" => 1, "update" => 1),
-                "primary" => $row["pk"],
-            );
+
+            $field = new TableField();
+
+            $field->name = $name;
+            $field->type = (preg_match('~int~i', $type) ? "integer" : (preg_match('~char|clob|text~i', $type) ?
+                "text" : (preg_match('~blob~i', $type) ? "blob" : (preg_match('~real|floa|doub~i', $type) ?
+                "real" : "numeric"))));
+            $field->fullType = $type;
+            $field->default = (preg_match("~'(.*)'~", $default, $match) ? str_replace("''", "'", $match[1]) :
+                ($default == "NULL" ? null : $default));
+            $field->null = !$row["notnull"];
+            $field->privileges = array("select" => 1, "insert" => 1, "update" => 1);
+            $field->primary = $row["pk"];
+
             if ($row["pk"]) {
                 if ($primary != "") {
-                    $fields[$primary]["auto_increment"] = false;
+                    $fields[$primary]->autoIncrement = false;
                 } elseif (preg_match('~^integer$~i', $type)) {
-                    $fields[$name]["auto_increment"] = true;
+                    $fields[$name]->autoIncrement = true;
                 }
                 $primary = $name;
             }
+
+            $fields[$field->name] = $field;
         }
         $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->quote($table);
         $result = $this->connection->result($query);
-        preg_match_all('~(("[^"]*+")+|[a-z0-9_]+)\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i', $result, $matches, PREG_SET_ORDER);
+        preg_match_all('~(("[^"]*+")+|[a-z0-9_]+)\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i',
+            $result, $matches, PREG_SET_ORDER);
         foreach ($matches as $match) {
             $name = str_replace('""', '"', preg_replace('~^"|"$~', '', $match[1]));
-            if ($fields[$name]) {
-                $fields[$name]["collation"] = trim($match[3], "'");
+            if (isset($fields[$name])) {
+                $fields[$name]->collation = trim($match[3], "'");
             }
         }
         return $fields;
@@ -221,7 +227,7 @@ class Server extends AbstractServer
         }
         if (!$indexes) {
             foreach ($this->fields($table) as $name => $field) {
-                if ($field["primary"]) {
+                if ($field->primary) {
                     $indexes[""] = array("type" => "PRIMARY", "columns" => array($name), "lengths" => [], "descs" => array(null));
                 }
             }
@@ -396,7 +402,7 @@ class Server extends AbstractServer
             if (!$fields) {
                 foreach ($this->fields($table) as $key => $field) {
                     if ($indexes) {
-                        $field["auto_increment"] = 0;
+                        $field->autoIncrement = 0;
                     }
                     $fields[] = $this->util->processField($field, $field);
                     $originals[$key] = $this->escapeId($key);
