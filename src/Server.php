@@ -4,6 +4,7 @@ namespace Lagdo\DbAdmin\Driver\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
 
+use DirectoryIterator;
 use Exception;
 
 class Server extends AbstractServer
@@ -17,6 +18,19 @@ class Server extends AbstractServer
     }
 
     /**
+     * Get the full path to the database file
+     *
+     * @param string $database
+     * @param array $options
+     *
+     * @return string
+     */
+    private function filename($database, $options)
+    {
+        return rtrim($options['directory'], '/\\') . "/$database.sdb";
+    }
+
+    /**
      * @inheritDoc
      */
     public function connect()
@@ -26,8 +40,8 @@ class Server extends AbstractServer
         //     return;
         // }
 
-        list($filename, $options) = $this->db->options();
-        if ($options['password'] != "") {
+        list(, $options) = $this->db->options();
+        if (array_key_exists('password', $options) && $options['password'] != "") {
             throw new AuthException($this->util->lang('Database does not support password.'));
         }
 
@@ -45,9 +59,9 @@ class Server extends AbstractServer
         if ($this->connection === null) {
             $this->connection = $connection;
             $this->driver = new Driver($this->db, $this->util, $this, $connection);
+            // By default, connect to the in memory database.
+            $connection->open(':memory:', $options);
         }
-
-        $connection->open($filename, $options);
 
         return $connection;
     }
@@ -65,12 +79,27 @@ class Server extends AbstractServer
      */
     public function databases($flush)
     {
-        return [];
+        $databases = [];
+        list(, $options) = $this->db->options();
+        $directory = rtrim($options['directory'], '/\\');
+        $iterator = new DirectoryIterator($directory);
+        // Iterate on dir content
+        foreach($iterator as $file)
+        {
+            // skip everything except PHP files
+            if(!$file->isFile() || $file->getExtension() != 'sdb')
+            {
+                continue;
+            }
+            $databases[] = $file->getBasename('.sdb');
+        }
+        return $databases;
     }
 
     public function limit($query, $where, $limit, $offset = 0, $separator = " ")
     {
-        return " $query$where" . ($limit !== null ? $separator . "LIMIT $limit" . ($offset ? " OFFSET $offset" : "") : "");
+        return " $query$where" . ($limit !== null ? $separator .
+            "LIMIT $limit" . ($offset ? " OFFSET $offset" : "") : "");
     }
 
     public function limitToOne($table, $query, $where, $separator = "\n")
@@ -106,10 +135,14 @@ class Server extends AbstractServer
 
     public function tableStatus($name = "", $fast = false)
     {
+        if ($name === '') {
+            return [];
+        }
         $tables = [];
-        foreach ($this->db->rows("SELECT name AS Name, type AS Engine, 'rowid' AS Oid, '' AS Auto_increment " .
+        $query = "SELECT name AS Name, type AS Engine, 'rowid' AS Oid, '' AS Auto_increment " .
             "FROM sqlite_master WHERE type IN ('table', 'view') " . ($name != "" ? "AND name = " .
-            $this->quote($name) : "ORDER BY name")) as $row) {
+            $this->quote($name) : "ORDER BY name");
+        foreach ($this->db->rows($query) as $row) {
             $row["Rows"] = $this->connection->result("SELECT COUNT(*) FROM " . $this->escapeId($row["Name"]));
             $tables[$row["Name"]] = $row;
         }
@@ -264,30 +297,34 @@ class Server extends AbstractServer
 
     public function createDatabase($database, $collation)
     {
-        if (file_exists($database)) {
+        list(, $options) = $this->db->options();
+        $filename = $this->filename($database, $options);
+        if (file_exists($filename)) {
             $this->db->setError($this->util->lang('File exists.'));
             return false;
         }
-        if (!$this->checkSqliteName($database)) {
+        if (!$this->checkSqliteName($filename)) {
             return false;
         }
         try {
-            $link = new Min_SQLite($database);
+            $connection = $this->connect(); // New connection
+            $connection->open($filename, $options);
         } catch (Exception $ex) {
             $this->db->setError($ex->getMessage());
             return false;
         }
-        $link->query('PRAGMA encoding = "UTF-8"');
-        $link->query('CREATE TABLE adminer (i)'); // otherwise creates empty file
-        $link->query('DROP TABLE adminer');
+        $connection->query('PRAGMA encoding = "UTF-8"');
+        $connection->query('CREATE TABLE adminer (i)'); // otherwise creates empty file
+        $connection->query('DROP TABLE adminer');
         return true;
     }
 
     public function dropDatabases($databases)
     {
-        $this->connection->__construct(":memory:"); // to unlock file, doesn't work in PDO on Windows
+        list(, $options) = $this->db->options();
         foreach ($databases as $database) {
-            if (!@unlink($database)) {
+            $filename = $this->filename($database, $options);
+            if (!@unlink($filename)) {
                 $this->db->setError($this->util->lang('File exists.'));
                 return false;
             }
@@ -295,14 +332,15 @@ class Server extends AbstractServer
         return true;
     }
 
-    public function renameDatabase($name, $collation)
+    public function renameDatabase($database, $collation)
     {
-        if (!$this->checkSqliteName($name)) {
+        list(, $options) = $this->db->options();
+        $filename = $this->filename($database, $options);
+        if (!$this->checkSqliteName($filename)) {
             return false;
         }
-        $this->connection->__construct(":memory:");
         $this->db->setError($this->util->lang('File exists.'));
-        return @rename($this->selectedDatabase(), $name);
+        return @rename($this->filename($this->selectedDatabase(), $options), $filename);
     }
 
     public function autoIncrement()
@@ -460,11 +498,9 @@ class Server extends AbstractServer
 
     protected function index_sql($table, $type, $name, $columns)
     {
-        return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "")
-            . $this->escapeId($name != "" ? $name : uniqid($table . "_"))
-            . " ON " . $this->table($table)
-            . " $columns"
-        ;
+        return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
+            $this->escapeId($name != "" ? $name : uniqid($table . "_")) .
+            " ON " . $this->table($table) . " $columns";
     }
 
     public function alterIndexes($table, $alter)
@@ -513,10 +549,10 @@ class Server extends AbstractServer
         $idf = '(?:[^`"\s]+|`[^`]*`|"[^"]*")+';
         $trigger_options = $this->triggerOptions();
         preg_match(
-            "~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $trigger_options["Timing"]) . ")\\s+([a-z]+)(?:\\s+OF\\s+($idf))?\\s+ON\\s*$idf\\s*(?:FOR\\s+EACH\\s+ROW\\s)?(.*)~is",
-            $this->connection->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " . $this->quote($name)),
-            $match
-        );
+            "~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $trigger_options["Timing"]) .
+            ")\\s+([a-z]+)(?:\\s+OF\\s+($idf))?\\s+ON\\s*$idf\\s*(?:FOR\\s+EACH\\s+ROW\\s)?(.*)~is",
+            $this->connection->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
+            $this->quote($name)), $match);
         $of = $match[3];
         return array(
             "Timing" => strtoupper($match[1]),
@@ -531,8 +567,10 @@ class Server extends AbstractServer
     {
         $triggers = [];
         $trigger_options = $this->triggerOptions();
-        foreach ($this->db->rows("SELECT * FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->quote($table)) as $row) {
-            preg_match('~^CREATE\s+TRIGGER\s*(?:[^`"\s]+|`[^`]*`|"[^"]*")+\s*(' . implode("|", $trigger_options["Timing"]) . ')\s*(.*?)\s+ON\b~i', $row["sql"], $match);
+        $query = "SELECT * FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->quote($table);
+        foreach ($this->db->rows($query) as $row) {
+            preg_match('~^CREATE\s+TRIGGER\s*(?:[^`"\s]+|`[^`]*`|"[^"]*")+\s*(' .
+                implode("|", $trigger_options["Timing"]) . ')\s*(.*?)\s+ON\b~i', $row["sql"], $match);
             $triggers[$row["name"]] = array($match[1], $match[2]);
         }
         return $triggers;
@@ -585,7 +623,8 @@ class Server extends AbstractServer
 
     public function createTriggerSql($table)
     {
-        return implode($this->db->values("SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->quote($table)));
+        $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->quote($table);
+        return implode($this->db->values($query));
     }
 
     public function variables()
@@ -600,9 +639,12 @@ class Server extends AbstractServer
     public function statusVariables()
     {
         $variables = [];
-        foreach ($this->db->values("PRAGMA compile_options") as $option) {
-            list($key, $val) = explode("=", $option, 2);
-            $variables[$key] = $val;
+        if (!($options = $this->db->values("PRAGMA compile_options"))) {
+            return [];
+        }
+        foreach ($options as $option) {
+            $values = explode("=", $option, 2);
+            $variables[$values[0]] = count($values) > 1 ? $values[1] : "true";
         }
         return $variables;
     }
@@ -614,11 +656,21 @@ class Server extends AbstractServer
 
     public function driverConfig()
     {
+        $types = array();
+        $structuredTypes = array();
+        foreach (array( //! arrays
+            $this->util->lang('Numbers') => array("integer" => 0, "real" => 0, "numeric" => 0),
+            $this->util->lang('Strings') => array("text" => 0),
+            $this->util->lang('Binary') => array("blob" => 0),
+        ) as $key => $val) { //! can be retrieved from pg_type
+            $types += $val;
+            $structuredTypes[$key] = array_keys($val);
+        }
         return array(
             'possibleDrivers' => array("SQLite3", "PDO_SQLite"),
             'jush' => "sqlite",
-            'types' => array("integer" => 0, "real" => 0, "numeric" => 0, "text" => 0, "blob" => 0),
-            'structuredTypes' => array_keys($this->types),
+            'types' => $types,
+            'structuredTypes' => $structuredTypes,
             'unsigned' => [],
             'operators' => array("=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%", "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"), // REGEXP can be user defined function
             'functions' => array("hex", "length", "lower", "round", "unixepoch", "upper"),

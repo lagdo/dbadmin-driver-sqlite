@@ -9,19 +9,11 @@ trait ConnectionTrait
     //     $this->query("PRAGMA foreign_keys = 1");
     // }
 
-    public function selectDatabase($filename)
+    public function selectDatabase($database)
     {
-        // Only one database at once on this version.
+        list(, $options) = $this->db->options();
+        $this->open($database, $options);
         return true;
-
-        // if (is_readable($filename) && $this->query("ATTACH " .
-        //     $this->quote(preg_match("~(^[/\\\\]|:)~", $filename) ? $filename :
-        //     dirname($_SERVER["SCRIPT_FILENAME"]) . "/$filename") . " AS a")) { // is_readable - SQLite 3
-        //     $this->query("PRAGMA foreign_keys = 1");
-        //     $this->query("PRAGMA busy_timeout = 500");
-        //     return true;
-        // }
-        // return false;
     }
 
     public function multiQuery($query)

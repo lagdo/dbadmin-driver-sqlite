@@ -25,7 +25,7 @@ class Connection extends AbstractConnection
      */
     public function serverInfo()
     {
-        $version = $this->client->version();
+        $version = SQLite3::version();
         return $version["versionString"];
     }
 
