@@ -11,8 +11,7 @@ trait ConnectionTrait
 
     public function selectDatabase($database)
     {
-        list(, $options) = $this->db->options();
-        $this->open($database, $options);
+        $this->open($database, $this->db->options());
         return true;
     }
 

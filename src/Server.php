@@ -43,16 +43,6 @@ class Server extends AbstractServer
      */
     public function connect()
     {
-        // if (($this->connection)) {
-        //     // Do not create if it already exists
-        //     return;
-        // }
-
-        list(, $options) = $this->db->options();
-        if (array_key_exists('password', $options) && $options['password'] != "") {
-            throw new AuthException($this->util->lang('Database does not support password.'));
-        }
-
         $connection = null;
         if (class_exists("SQLite3")) {
             $connection = new Sqlite\Connection($this->db, $this->util, $this, 'SQLite3');
@@ -68,7 +58,7 @@ class Server extends AbstractServer
             $this->connection = $connection;
             $this->driver = new Driver($this->db, $this->util, $this, $connection);
             // By default, connect to the in memory database.
-            $connection->open(':memory:', $options);
+            $this->connection->open(':memory:', $this->db->options());
         }
 
         return $connection;
@@ -88,8 +78,7 @@ class Server extends AbstractServer
     public function databases($flush)
     {
         $databases = [];
-        list(, $options) = $this->db->options();
-        $directory = rtrim($options['directory'], '/\\');
+        $directory = rtrim($this->db->options('directory'), '/\\');
         $iterator = new DirectoryIterator($directory);
         // Iterate on dir content
         foreach($iterator as $file)
@@ -283,8 +272,8 @@ class Server extends AbstractServer
     public function view($name)
     {
         return array("select" => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
-            $this->connection->result("SELECT sql FROM sqlite_master WHERE name = " . $this->quote($name))
-        )); //! identifiers may be inside []
+            $this->connection->result("SELECT sql FROM sqlite_master WHERE name = " .
+            $this->quote($name)))); //! identifiers may be inside []
     }
 
     public function collations()
@@ -301,7 +290,7 @@ class Server extends AbstractServer
 
     public function createDatabase($database, $collation)
     {
-        list(, $options) = $this->db->options();
+        $options = $this->db->options();
         $filename = $this->filename($database, $options);
         if (file_exists($filename)) {
             $this->db->setError($this->util->lang('File exists.'));
@@ -327,7 +316,7 @@ class Server extends AbstractServer
 
     public function dropDatabases($databases)
     {
-        list(, $options) = $this->db->options();
+        $options = $this->db->options();
         foreach ($databases as $database) {
             $filename = $this->filename($database, $options);
             if (!@unlink($filename)) {
@@ -340,7 +329,7 @@ class Server extends AbstractServer
 
     public function renameDatabase($database, $collation)
     {
-        list(, $options) = $this->db->options();
+        $options = $this->db->options();
         $filename = $this->filename($database, $options);
         if (!$this->checkSqliteName($filename)) {
             $this->db->setError($this->util->lang('Please use one of the extensions %s.',
@@ -384,7 +373,7 @@ class Server extends AbstractServer
             if ($table != $name && !$this->db->queries("ALTER TABLE " . $this->table($table) . " RENAME TO " . $this->table($name))) {
                 return false;
             }
-        } elseif (!$this->recreate_table($table, $name, $alter, $originals, $foreign, $autoIncrement)) {
+        } elseif (!$this->recreateTable($table, $name, $alter, $originals, $foreign, $autoIncrement)) {
             return false;
         }
         if ($autoIncrement) {
@@ -398,7 +387,7 @@ class Server extends AbstractServer
         return true;
     }
 
-    protected function recreate_table($table, $name, $fields, $originals, $foreign, $autoIncrement, $indexes = [])
+    protected function recreateTable($table, $name, $fields, $originals, $foreign, $autoIncrement, $indexes = [])
     {
         if ($table != "") {
             if (!$fields) {
@@ -504,7 +493,7 @@ class Server extends AbstractServer
         return true;
     }
 
-    protected function index_sql($table, $type, $name, $columns)
+    protected function indexSql($table, $type, $name, $columns)
     {
         return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
             $this->escapeId($name != "" ? $name : uniqid($table . "_")) .
@@ -515,13 +504,13 @@ class Server extends AbstractServer
     {
         foreach ($alter as $primary) {
             if ($primary[0] == "PRIMARY") {
-                return $this->recreate_table($table, $table, [], [], [], 0, $alter);
+                return $this->recreateTable($table, $table, [], [], [], 0, $alter);
             }
         }
         foreach (array_reverse($alter) as $val) {
             if (!$this->db->queries(
                 $val[2] == "DROP" ? "DROP INDEX " . $this->escapeId($val[1]) :
-                $this->index_sql($table, $val[0], $val[1], "(" . implode(", ", $val[2]) . ")")
+                $this->indexSql($table, $val[0], $val[1], "(" . implode(", ", $val[2]) . ")")
             )) {
                 return false;
             }
@@ -615,7 +604,7 @@ class Server extends AbstractServer
             if ($name == '') {
                 continue;
             }
-            $query .= ";\n\n" . $this->index_sql($table, $index['type'], $name,
+            $query .= ";\n\n" . $this->indexSql($table, $index['type'], $name,
                 "(" . implode(", ", array_map(function ($key) {
                     return $this->escapeId($key);
                 }, $index['columns'])) . ")");
