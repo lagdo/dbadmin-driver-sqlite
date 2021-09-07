@@ -143,15 +143,13 @@ class Server extends AbstractServer
 
     public function tableStatus($name = "", $fast = false)
     {
-        if ($name === '') {
-            return [];
-        }
         $tables = [];
         $query = "SELECT name AS Name, type AS Engine, 'rowid' AS Oid, '' AS Auto_increment " .
             "FROM sqlite_master WHERE type IN ('table', 'view') " . ($name != "" ? "AND name = " .
             $this->quote($name) : "ORDER BY name");
         foreach ($this->db->rows($query) as $row) {
             $row["Rows"] = $this->connection->result("SELECT COUNT(*) FROM " . $this->escapeId($row["Name"]));
+            $row["Collation"] = ''; // No collation
             $tables[$row["Name"]] = $row;
         }
         foreach ($this->db->rows("SELECT * FROM sqlite_sequence", null, "") as $row) {
@@ -196,14 +194,14 @@ class Server extends AbstractServer
                 if ($primary != "") {
                     $fields[$primary]->autoIncrement = false;
                 } elseif (preg_match('~^integer$~i', $type)) {
-                    $fields[$name]->autoIncrement = true;
+                    $field->autoIncrement = true;
                 }
                 $primary = $name;
             }
 
             $fields[$field->name] = $field;
         }
-        $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->quote($table);
+        $query = "SELECT sql FROM sqlite_master WHERE type IN ('table', 'view') AND name = " . $this->quote($table);
         $result = $this->connection->result($query);
         preg_match_all('~(("[^"]*+")+|[a-z0-9_]+)\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i',
             $result, $matches, PREG_SET_ORDER);
@@ -284,9 +282,7 @@ class Server extends AbstractServer
 
     public function view($name)
     {
-        return array("select" => preg_replace(
-            '~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU',
-            '',
+        return array("select" => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
             $this->connection->result("SELECT sql FROM sqlite_master WHERE name = " . $this->quote($name))
         )); //! identifiers may be inside []
     }
@@ -294,7 +290,7 @@ class Server extends AbstractServer
     public function collations()
     {
         $create = $this->util->input()->hasTable();
-        return (($create) ? $this->db->values("PRAGMA collation_list", 1) : []);
+        return ($create) ? $this->db->values("PRAGMA collation_list", 1) : [];
     }
 
     private function checkSqliteName($name)
@@ -560,8 +556,7 @@ class Server extends AbstractServer
         }
         $idf = '(?:[^`"\s]+|`[^`]*`|"[^"]*")+';
         $trigger_options = $this->triggerOptions();
-        preg_match(
-            "~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $trigger_options["Timing"]) .
+        preg_match("~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $trigger_options["Timing"]) .
             ")\\s+([a-z]+)(?:\\s+OF\\s+($idf))?\\s+ON\\s*$idf\\s*(?:FOR\\s+EACH\\s+ROW\\s)?(.*)~is",
             $this->connection->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
             $this->quote($name)), $match);

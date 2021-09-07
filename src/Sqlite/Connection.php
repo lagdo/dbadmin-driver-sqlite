@@ -63,6 +63,6 @@ class Connection extends AbstractConnection
             return false;
         }
         $row = $result->result->fetchArray();
-        return $row[$field];
+        return is_array($row) && array_key_exists($field, $row) ? $row[$field] : false;
     }
 }
