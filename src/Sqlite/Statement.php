@@ -3,7 +3,7 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Db\StatementInterface;
-use Lagdo\DbAdmin\Driver\Db\StatementField;
+use Lagdo\DbAdmin\Driver\Entity\StatementField;
 
 use SQLite3Result;
 
