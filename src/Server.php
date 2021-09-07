@@ -176,7 +176,7 @@ class Server extends AbstractServer
             $field->default = (preg_match("~'(.*)'~", $default, $match) ? str_replace("''", "'", $match[1]) :
                 ($default == "NULL" ? null : $default));
             $field->null = !$row["notnull"];
-            $field->privileges = array("select" => 1, "insert" => 1, "update" => 1);
+            $field->privileges = ["select" => 1, "insert" => 1, "update" => 1];
             $field->primary = $row["pk"];
 
             if ($row["pk"]) {
@@ -212,7 +212,7 @@ class Server extends AbstractServer
         $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->quote($table);
         $result = $connection->result($query);
         if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
-            $indexes[""] = array("type" => "PRIMARY", "columns" => [], "lengths" => [], "descs" => []);
+            $indexes[""] = ["type" => "PRIMARY", "columns" => [], "lengths" => [], "descs" => []];
             preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i', $match[1], $matches, PREG_SET_ORDER);
             foreach ($matches as $match) {
                 $indexes[""]["columns"][] = $this->unescapeId($match[2]) . $match[4];
@@ -222,7 +222,7 @@ class Server extends AbstractServer
         if (!$indexes) {
             foreach ($this->fields($table) as $name => $field) {
                 if ($field->primary) {
-                    $indexes[""] = array("type" => "PRIMARY", "columns" => array($name), "lengths" => [], "descs" => array(null));
+                    $indexes[""] = ["type" => "PRIMARY", "columns" => [$name], "lengths" => [], "descs" => [null]];
                 }
             }
         }
@@ -230,7 +230,7 @@ class Server extends AbstractServer
         $results = $this->db->keyValues($query, $connection);
         foreach ($this->db->rows("PRAGMA index_list(" . $this->table($table) . ")", $connection) as $row) {
             $name = $row["name"];
-            $index = array("type" => ($row["unique"] ? "UNIQUE" : "INDEX"));
+            $index = ["type" => ($row["unique"] ? "UNIQUE" : "INDEX")];
             $index["lengths"] = [];
             $index["descs"] = [];
             foreach ($this->db->rows("PRAGMA index_info(" . $this->escapeId($name) . ")", $connection) as $row1) {
@@ -271,9 +271,11 @@ class Server extends AbstractServer
 
     public function view($name)
     {
-        return array("select" => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
-            $this->connection->result("SELECT sql FROM sqlite_master WHERE name = " .
-            $this->quote($name)))); //! identifiers may be inside []
+        return [
+            "select" => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
+                $this->connection->result("SELECT sql FROM sqlite_master WHERE name = " .
+                $this->quote($name)))
+            ]; //! identifiers may be inside []
     }
 
     public function collations()
@@ -422,7 +424,7 @@ class Server extends AbstractServer
                 }
                 if (!$drop_indexes[$key_name]) {
                     if ($index["type"] != "PRIMARY" || !$primary_key) {
-                        $indexes[] = array($index["type"], $key_name, $columns);
+                        $indexes[] = [$index["type"], $key_name, $columns];
                     }
                 }
             }
@@ -541,7 +543,7 @@ class Server extends AbstractServer
     public function trigger($name)
     {
         if ($name == "") {
-            return array("Statement" => "BEGIN\n\t;\nEND");
+            return ["Statement" => "BEGIN\n\t;\nEND"];
         }
         $idf = '(?:[^`"\s]+|`[^`]*`|"[^"]*")+';
         $trigger_options = $this->triggerOptions();
@@ -550,13 +552,13 @@ class Server extends AbstractServer
             $this->connection->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
             $this->quote($name)), $match);
         $of = $match[3];
-        return array(
+        return [
             "Timing" => strtoupper($match[1]),
             "Event" => strtoupper($match[2]) . ($of ? " OF" : ""),
             "Of" => ($of[0] == '`' || $of[0] == '"' ? $this->unescapeId($of) : $of),
             "Trigger" => $name,
             "Statement" => $match[4],
-        );
+        ];
     }
 
     public function triggers($table)
@@ -567,18 +569,18 @@ class Server extends AbstractServer
         foreach ($this->db->rows($query) as $row) {
             preg_match('~^CREATE\s+TRIGGER\s*(?:[^`"\s]+|`[^`]*`|"[^"]*")+\s*(' .
                 implode("|", $trigger_options["Timing"]) . ')\s*(.*?)\s+ON\b~i', $row["sql"], $match);
-            $triggers[$row["name"]] = array($match[1], $match[2]);
+            $triggers[$row["name"]] = [$match[1], $match[2]];
         }
         return $triggers;
     }
 
     public function triggerOptions()
     {
-        return array(
-            "Timing" => array("BEFORE", "AFTER", "INSTEAD OF"),
-            "Event" => array("INSERT", "UPDATE", "UPDATE OF", "DELETE"),
-            "Type" => array("FOR EACH ROW"),
-        );
+        return [
+            "Timing" => ["BEFORE", "AFTER", "INSTEAD OF"],
+            "Event" => ["INSERT", "UPDATE", "UPDATE OF", "DELETE"],
+            "Type" => ["FOR EACH ROW"],
+        ];
     }
 
     public function begin()
@@ -626,7 +628,7 @@ class Server extends AbstractServer
     public function variables()
     {
         $variables = [];
-        foreach (array("auto_vacuum", "cache_size", "count_changes", "default_cache_size", "empty_result_callbacks", "encoding", "foreign_keys", "full_column_names", "fullfsync", "journal_mode", "journal_size_limit", "legacy_file_format", "locking_mode", "page_size", "max_page_count", "read_uncommitted", "recursive_triggers", "reverse_unordered_selects", "secure_delete", "short_column_names", "synchronous", "temp_store", "temp_store_directory", "schema_version", "integrity_check", "quick_check") as $key) {
+        foreach (["auto_vacuum", "cache_size", "count_changes", "default_cache_size", "empty_result_callbacks", "encoding", "foreign_keys", "full_column_names", "fullfsync", "journal_mode", "journal_size_limit", "legacy_file_format", "locking_mode", "page_size", "max_page_count", "read_uncommitted", "recursive_triggers", "reverse_unordered_selects", "secure_delete", "short_column_names", "synchronous", "temp_store", "temp_store_directory", "schema_version", "integrity_check", "quick_check"] as $key) {
             $variables[$key] = $this->connection->result("PRAGMA $key");
         }
         return $variables;
@@ -650,37 +652,28 @@ class Server extends AbstractServer
         return preg_match('~^(columns|database|drop_col|dump|indexes|descidx|move_col|sql|status|table|trigger|variables|view|view_trigger)$~', $feature);
     }
 
-    public function driverConfig()
+    protected function setConfig()
     {
-        $types = array();
-        $structuredTypes = array();
-        foreach (array( //! arrays
-            $this->util->lang('Numbers') => array("integer" => 0, "real" => 0, "numeric" => 0),
-            $this->util->lang('Strings') => array("text" => 0),
-            $this->util->lang('Binary') => array("blob" => 0),
-        ) as $key => $val) { //! can be retrieved from pg_type
-            $types += $val;
-            $structuredTypes[$key] = array_keys($val);
+        $this->config->jush = 'sqlite';
+        $this->config->drivers = ["SQLite3", "PDO_SQLite"];
+        foreach ([ //! arrays
+            $this->util->lang('Numbers') => ["integer" => 0, "real" => 0, "numeric" => 0],
+            $this->util->lang('Strings') => ["text" => 0],
+            $this->util->lang('Binary') => ["blob" => 0],
+        ] as $key => $val) { //! can be retrieved from pg_type
+            $this->config->types += $val;
+            $this->config->structuredTypes[$key] = array_keys($val);
         }
-        return array(
-            'possibleDrivers' => array("SQLite3", "PDO_SQLite"),
-            'jush' => "sqlite",
-            'types' => $types,
-            'structuredTypes' => $structuredTypes,
-            'unsigned' => [],
-            'operators' => array("=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%", "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"), // REGEXP can be user defined function
-            'functions' => array("hex", "length", "lower", "round", "unixepoch", "upper"),
-            'grouping' => array("avg", "count", "count distinct", "group_concat", "max", "min", "sum"),
-            'editFunctions' => array(
-                array(
-                    // "text" => "date('now')/time('now')/datetime('now')",
-                ),
-                array(
-                    "integer|real|numeric" => "+/-",
-                    // "text" => "date/time/datetime",
-                    "text" => "||",
-                )
-            ),
-        );
+        // $this->config->unsigned = [];
+        $this->config->operators = ["=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%", "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"]; // REGEXP can be user defined function;
+        $this->config->functions = ["hex", "length", "lower", "round", "unixepoch", "upper"];
+        $this->config->grouping = ["avg", "count", "count distinct", "group_concat", "max", "min", "sum"];
+        $this->config->editFunctions = [[
+            // "text" => "date('now')/time('now')/datetime('now')",
+        ],[
+            "integer|real|numeric" => "+/-",
+            // "text" => "date/time/datetime",
+            "text" => "||",
+        ]];
     }
 }
