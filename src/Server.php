@@ -7,6 +7,7 @@ use Lagdo\DbAdmin\Driver\Entity\TableField;
 use Lagdo\DbAdmin\Driver\Entity\Table;
 use Lagdo\DbAdmin\Driver\Entity\Index;
 use Lagdo\DbAdmin\Driver\Entity\ForeignKey;
+use Lagdo\DbAdmin\Driver\Entity\Trigger;
 
 use DirectoryIterator;
 use Exception;
@@ -565,8 +566,8 @@ class Server extends AbstractServer
             return ["Statement" => "BEGIN\n\t;\nEND"];
         }
         $idf = '(?:[^`"\s]+|`[^`]*`|"[^"]*")+';
-        $trigger_options = $this->triggerOptions();
-        preg_match("~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $trigger_options["Timing"]) .
+        $options = $this->triggerOptions();
+        preg_match("~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $options["Timing"]) .
             ")\\s+([a-z]+)(?:\\s+OF\\s+($idf))?\\s+ON\\s*$idf\\s*(?:FOR\\s+EACH\\s+ROW\\s)?(.*)~is",
             $this->connection->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
             $this->quote($name)), $match);
@@ -583,12 +584,12 @@ class Server extends AbstractServer
     public function triggers($table)
     {
         $triggers = [];
-        $trigger_options = $this->triggerOptions();
+        $options = $this->triggerOptions();
         $query = "SELECT * FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->quote($table);
         foreach ($this->db->rows($query) as $row) {
             preg_match('~^CREATE\s+TRIGGER\s*(?:[^`"\s]+|`[^`]*`|"[^"]*")+\s*(' .
-                implode("|", $trigger_options["Timing"]) . ')\s*(.*?)\s+ON\b~i', $row["sql"], $match);
-            $triggers[$row["name"]] = [$match[1], $match[2]];
+                implode("|", $options["Timing"]) . ')\s*(.*?)\s+ON\b~i', $row["sql"], $match);
+            $triggers[$row["name"]] = new Trigger($match[1], $match[2]);
         }
         return $triggers;
     }
@@ -679,18 +680,14 @@ class Server extends AbstractServer
         $this->config->jush = 'sqlite';
         $this->config->drivers = ["SQLite3", "PDO_SQLite"];
 
-        $groups = [ //! arrays
-            $this->util->lang('Numbers'),
-            $this->util->lang('Strings'),
-            $this->util->lang('Binary'),
+        $types = [ //! arrays
+            $this->util->lang('Numbers') => ["integer" => 0, "real" => 0, "numeric" => 0],
+            $this->util->lang('Strings') => ["text" => 0],
+            $this->util->lang('Binary') => ["blob" => 0],
         ];
-        $this->config->types = [ //! arrays
-            ["integer" => 0, "real" => 0, "numeric" => 0],
-            ["text" => 0],
-            ["blob" => 0],
-        ];
-        foreach ($groups as $key => $group) {
-            $this->config->structuredTypes[$group] = array_keys($this->config->types[$key]);
+        foreach ($types as $group => $_types) {
+            $this->config->structuredTypes[$group] = array_keys($_types);
+            $this->config->types = array_merge($this->config->types, $_types);
         }
 
         // $this->config->unsigned = [];
