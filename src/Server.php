@@ -5,6 +5,7 @@ namespace Lagdo\DbAdmin\Driver\Sqlite;
 use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
 use Lagdo\DbAdmin\Driver\Entity\TableField;
 use Lagdo\DbAdmin\Driver\Entity\Table;
+use Lagdo\DbAdmin\Driver\Entity\Index;
 
 use DirectoryIterator;
 use Exception;
@@ -219,42 +220,52 @@ class Server extends AbstractServer
         $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->quote($table);
         $result = $connection->result($query);
         if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
-            $indexes[""] = ["type" => "PRIMARY", "columns" => [], "lengths" => [], "descs" => []];
-            preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i', $match[1], $matches, PREG_SET_ORDER);
+            $indexes[""] = new Index();
+            $indexes[""]->type = "PRIMARY";
+            preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i',
+                $match[1], $matches, PREG_SET_ORDER);
             foreach ($matches as $match) {
-                $indexes[""]["columns"][] = $this->unescapeId($match[2]) . $match[4];
-                $indexes[""]["descs"][] = (preg_match('~DESC~i', $match[5]) ? '1' : null);
+                $indexes[""]->columns[] = $this->unescapeId($match[2]) . $match[4];
+                $indexes[""]->descs[] = (preg_match('~DESC~i', $match[5]) ? '1' : null);
             }
         }
         if (!$indexes) {
             foreach ($this->fields($table) as $name => $field) {
                 if ($field->primary) {
-                    $indexes[""] = ["type" => "PRIMARY", "columns" => [$name], "lengths" => [], "descs" => [null]];
+                    if (!isset($indexes[""])) {
+                        $indexes[""] = new Index();
+                    }
+                    $indexes[""]->type = "PRIMARY";
+                    $indexes[""]->columns = [$name];
+                    $indexes[""]->lengths = [];
+                    $indexes[""]->descs = [null];
                 }
             }
         }
         $query = "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = " . $this->quote($table);
         $results = $this->db->keyValues($query, $connection);
         foreach ($this->db->rows("PRAGMA index_list(" . $this->table($table) . ")", $connection) as $row) {
+            $index = new Index();
+
             $name = $row["name"];
-            $index = ["type" => ($row["unique"] ? "UNIQUE" : "INDEX")];
-            $index["lengths"] = [];
-            $index["descs"] = [];
+            $index->type = $row["unique"] ? "UNIQUE" : "INDEX";
+            $index->lengths = [];
+            $index->descs = [];
             foreach ($this->db->rows("PRAGMA index_info(" . $this->escapeId($name) . ")", $connection) as $row1) {
-                $index["columns"][] = $row1["name"];
-                $index["descs"][] = null;
+                $index->columns[] = $row1["name"];
+                $index->descs[] = null;
             }
             if (preg_match('~^CREATE( UNIQUE)? INDEX ' . preg_quote($this->escapeId($name) . ' ON ' .
                 $this->escapeId($table), '~') . ' \((.*)\)$~i', $results[$name], $regs)) {
                 preg_match_all('/("[^"]*+")+( DESC)?/', $regs[2], $matches);
                 foreach ($matches[2] as $key => $val) {
                     if ($val) {
-                        $index["descs"][$key] = '1';
+                        $index->descs[$key] = '1';
                     }
                 }
             }
-            if (!$indexes[""] || $index["type"] != "UNIQUE" || $index["columns"] != $indexes[""]["columns"] ||
-                $index["descs"] != $indexes[""]["descs"] || !preg_match("~^sqlite_~", $name)) {
+            if (!$indexes[""] || $index->type != "UNIQUE" || $index->columns != $indexes[""]->columns ||
+                $index->descs != $indexes[""]->descs || !preg_match("~^sqlite_~", $name)) {
                 $indexes[$name] = $index;
             }
         }
@@ -423,15 +434,15 @@ class Server extends AbstractServer
             }
             foreach ($this->indexes($table) as $key_name => $index) {
                 $columns = [];
-                foreach ($index["columns"] as $key => $column) {
+                foreach ($index->columns as $key => $column) {
                     if (!$originals[$column]) {
                         continue 2;
                     }
-                    $columns[] = $originals[$column] . ($index["descs"][$key] ? " DESC" : "");
+                    $columns[] = $originals[$column] . ($index->descs[$key] ? " DESC" : "");
                 }
                 if (!$drop_indexes[$key_name]) {
-                    if ($index["type"] != "PRIMARY" || !$primary_key) {
-                        $indexes[] = [$index["type"], $key_name, $columns];
+                    if ($index->type != "PRIMARY" || !$primary_key) {
+                        $indexes[] = [$index->type, $key_name, $columns];
                     }
                 }
             }
@@ -613,10 +624,10 @@ class Server extends AbstractServer
             if ($name == '') {
                 continue;
             }
-            $query .= ";\n\n" . $this->indexSql($table, $index['type'], $name,
+            $query .= ";\n\n" . $this->indexSql($table, $index->type, $name,
                 "(" . implode(", ", array_map(function ($key) {
                     return $this->escapeId($key);
-                }, $index['columns'])) . ")");
+                }, $index->columns)) . ")");
         }
         return $query;
     }
