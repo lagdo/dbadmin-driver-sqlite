@@ -14,6 +14,8 @@ use Exception;
 
 class Server extends AbstractServer
 {
+    use ConfigTrait;
+
     /**
      * The database file extensions
      *
@@ -27,19 +29,6 @@ class Server extends AbstractServer
     public function name()
     {
         return "SQLite 3";
-    }
-
-    /**
-     * Get the full path to the database file
-     *
-     * @param string $database
-     * @param array $options
-     *
-     * @return string
-     */
-    private function filename($database, $options)
-    {
-        return rtrim($options['directory'], '/\\') . "/$database";
     }
 
     /**
@@ -105,7 +94,7 @@ class Server extends AbstractServer
         $options = $this->db->options();
         $filename = $this->filename($database, $options);
         $connection = $this->connect(); // New connection
-        $connection->open($database, $options);
+        $connection->open($filename, $options);
         $pageSize = 0;
         $statement = $connection->query('pragma page_size');
         if (is_object($statement) && ($row = $statement->fetchRow())) {
@@ -153,7 +142,20 @@ class Server extends AbstractServer
 
     public function countTables($databases)
     {
-        return [];
+        $options = $this->db->options();
+        $connection = $this->connect(); // New connection
+        $counts = [];
+        foreach ($databases as $database) {
+            $counts[$database] = 0;
+            $filename = $this->filename($database, $options);
+            $connection->open($filename, $options);
+            $statement = $connection->query("SELECT count(*) FROM sqlite_master WHERE type IN ('table', 'view')");
+            if (is_object($statement) && ($row = $statement->fetchRow())) {
+                jaxon()->logger()->debug('********** Database', \compact('database', 'row'));
+                $counts[$database] = intval($row[0]);
+            }
+        }
+        return $counts;
     }
 
     /**
