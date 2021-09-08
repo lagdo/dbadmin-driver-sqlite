@@ -4,15 +4,17 @@ namespace Lagdo\DbAdmin\Driver\Sqlite;
 
 trait ConnectionTrait
 {
-    // public function __construct() {
-    //     parent::__construct(":memory:");
-    //     $this->query("PRAGMA foreign_keys = 1");
-    // }
+    use ConfigTrait;
 
     public function selectDatabase($database)
     {
-        $this->open($database, $this->db->options());
-        return true;
+        $options = $this->db->options();
+        $filename = $this->filename($database, $options);
+        $opened = $this->open($filename, $options);
+        if ($opened) {
+            $this->query("PRAGMA foreign_keys = 1");
+        }
+        return $opened;
     }
 
     public function multiQuery($query)
