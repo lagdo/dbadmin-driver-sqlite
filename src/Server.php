@@ -6,6 +6,7 @@ use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
 use Lagdo\DbAdmin\Driver\Entity\TableField;
 use Lagdo\DbAdmin\Driver\Entity\Table;
 use Lagdo\DbAdmin\Driver\Entity\Index;
+use Lagdo\DbAdmin\Driver\Entity\ForeignKey;
 
 use DirectoryIterator;
 use Exception;
@@ -276,13 +277,13 @@ class Server extends AbstractServer
     {
         $foreignKeys = [];
         foreach ($this->db->rows("PRAGMA foreign_key_list(" . $this->table($table) . ")") as $row) {
-            $foreignKey = &$foreignKeys[$row["id"]];
-            //! idf_unescape in SQLite2
-            if (!$foreignKey) {
-                $foreignKey = $row;
+            $name = $row["id"];
+            if (!isset($foreignKeys[$name])) {
+                $foreignKeys[$name] = new ForeignKey();
             }
-            $foreignKey["source"][] = $row["from"];
-            $foreignKey["target"][] = $row["to"];
+            //! idf_unescape in SQLite2
+            $foreignKeys[$name]->source[] = $row["from"];
+            $foreignKeys[$name]->target[] = $row["to"];
         }
         return $foreignKeys;
     }
@@ -453,11 +454,11 @@ class Server extends AbstractServer
                 }
             }
             foreach ($this->foreignKeys($table) as $key_name => $foreignKey) {
-                foreach ($foreignKey["source"] as $key => $column) {
+                foreach ($foreignKey->source as $key => $column) {
                     if (!$originals[$column]) {
                         continue 2;
                     }
-                    $foreignKey["source"][$key] = $this->unescapeId($originals[$column]);
+                    $foreignKey->source[$key] = $this->unescapeId($originals[$column]);
                 }
                 if (!isset($foreign[" $key_name"])) {
                     $foreign[] = " " . $this->formatForeignKey($foreignKey);
