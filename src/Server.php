@@ -4,6 +4,7 @@ namespace Lagdo\DbAdmin\Driver\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
 use Lagdo\DbAdmin\Driver\Entity\TableField;
+use Lagdo\DbAdmin\Driver\Entity\Table;
 
 use DirectoryIterator;
 use Exception;
@@ -130,6 +131,9 @@ class Server extends AbstractServer
         return [];
     }
 
+    /**
+     * @inheritDoc
+     */
     public function tableStatus($name = "", $fast = false)
     {
         $tables = [];
@@ -137,19 +141,22 @@ class Server extends AbstractServer
             "FROM sqlite_master WHERE type IN ('table', 'view') " . ($name != "" ? "AND name = " .
             $this->quote($name) : "ORDER BY name");
         foreach ($this->db->rows($query) as $row) {
-            $row["Rows"] = $this->connection->result("SELECT COUNT(*) FROM " . $this->escapeId($row["Name"]));
-            $row["Collation"] = ''; // No collation
-            $tables[$row["Name"]] = $row;
+            $status = new Table($row['Name']);
+            $status->engine = $row['Engine'];
+            $status->oid = $row['Oid'];
+            // $status->Auto_increment = $row['Auto_increment'];
+            $status->rows = $this->connection->result("SELECT COUNT(*) FROM " . $this->escapeId($row["Name"]));
+            $tables[$row["Name"]] = $status;
         }
-        foreach ($this->db->rows("SELECT * FROM sqlite_sequence", null, "") as $row) {
-            $tables[$row["name"]]["Auto_increment"] = $row["seq"];
-        }
+        // foreach ($this->db->rows("SELECT * FROM sqlite_sequence", null, "") as $row) {
+        //     $tables[$row["name"]]["Auto_increment"] = $row["seq"];
+        // }
         return ($name != "" ? $tables[$name] : $tables);
     }
 
     public function isView($tableStatus)
     {
-        return $tableStatus["Engine"] == "view";
+        return $tableStatus->engine == "view";
     }
 
     public function supportForeignKeys($tableStatus)
