@@ -652,18 +652,28 @@ class Server extends AbstractServer
         return preg_match('~^(columns|database|drop_col|dump|indexes|descidx|move_col|sql|status|table|trigger|variables|view|view_trigger)$~', $feature);
     }
 
+    /**
+     * @inheritDoc
+     */
     protected function setConfig()
     {
         $this->config->jush = 'sqlite';
         $this->config->drivers = ["SQLite3", "PDO_SQLite"];
-        foreach ([ //! arrays
-            $this->util->lang('Numbers') => ["integer" => 0, "real" => 0, "numeric" => 0],
-            $this->util->lang('Strings') => ["text" => 0],
-            $this->util->lang('Binary') => ["blob" => 0],
-        ] as $key => $val) { //! can be retrieved from pg_type
-            $this->config->types += $val;
-            $this->config->structuredTypes[$key] = array_keys($val);
+
+        $groups = [ //! arrays
+            $this->util->lang('Numbers'),
+            $this->util->lang('Strings'),
+            $this->util->lang('Binary'),
+        ];
+        $this->config->types = [ //! arrays
+            ["integer" => 0, "real" => 0, "numeric" => 0],
+            ["text" => 0],
+            ["blob" => 0],
+        ];
+        foreach ($groups as $key => $group) {
+            $this->config->structuredTypes[$group] = array_keys($this->config->types[$key]);
         }
+
         // $this->config->unsigned = [];
         $this->config->operators = ["=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%", "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"]; // REGEXP can be user defined function;
         $this->config->functions = ["hex", "length", "lower", "round", "unixepoch", "upper"];
