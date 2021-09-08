@@ -97,6 +97,28 @@ class Server extends AbstractServer
         return $databases;
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function databaseSize($database)
+    {
+        $options = $this->db->options();
+        $filename = $this->filename($database, $options);
+        $connection = $this->connect(); // New connection
+        $connection->open($database, $options);
+        $pageSize = 0;
+        $statement = $connection->query('pragma page_size');
+        if (is_object($statement) && ($row = $statement->fetchRow())) {
+            $pageSize = intval($row[0]);
+        }
+        $pageCount = 0;
+        $statement = $connection->query('pragma page_count');
+        if (is_object($statement) && ($row = $statement->fetchRow())) {
+            $pageCount = intval($row[0]);
+        }
+        return $pageSize * $pageCount;
+    }
+
     public function limit($query, $where, $limit, $offset = 0, $separator = " ")
     {
         return " $query$where" . ($limit !== null ? $separator .
