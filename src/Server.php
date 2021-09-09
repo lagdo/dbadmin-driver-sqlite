@@ -3,11 +3,11 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
-use Lagdo\DbAdmin\Driver\Entity\TableField;
-use Lagdo\DbAdmin\Driver\Entity\Table;
-use Lagdo\DbAdmin\Driver\Entity\Index;
-use Lagdo\DbAdmin\Driver\Entity\ForeignKey;
-use Lagdo\DbAdmin\Driver\Entity\Trigger;
+use Lagdo\DbAdmin\Driver\Entity\TableFieldEntity;
+use Lagdo\DbAdmin\Driver\Entity\TableEntity;
+use Lagdo\DbAdmin\Driver\Entity\IndexEntity;
+use Lagdo\DbAdmin\Driver\Entity\ForeignKeyEntity;
+use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
 
 use DirectoryIterator;
 use Exception;
@@ -168,7 +168,7 @@ class Server extends AbstractServer
             "FROM sqlite_master WHERE type IN ('table', 'view') " . ($name != "" ? "AND name = " .
             $this->quote($name) : "ORDER BY name");
         foreach ($this->db->rows($query) as $row) {
-            $status = new Table($row['Name']);
+            $status = new TableEntity($row['Name']);
             $status->engine = $row['Engine'];
             $status->oid = $row['Oid'];
             // $status->Auto_increment = $row['Auto_increment'];
@@ -200,7 +200,7 @@ class Server extends AbstractServer
             $type = strtolower($row["type"]);
             $default = $row["dflt_value"];
 
-            $field = new TableField();
+            $field = new TableFieldEntity();
 
             $field->name = $name;
             $field->type = (preg_match('~int~i', $type) ? "integer" : (preg_match('~char|clob|text~i', $type) ?
@@ -246,7 +246,7 @@ class Server extends AbstractServer
         $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->quote($table);
         $result = $connection->result($query);
         if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
-            $indexes[""] = new Index();
+            $indexes[""] = new IndexEntity();
             $indexes[""]->type = "PRIMARY";
             preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i',
                 $match[1], $matches, PREG_SET_ORDER);
@@ -259,7 +259,7 @@ class Server extends AbstractServer
             foreach ($this->fields($table) as $name => $field) {
                 if ($field->primary) {
                     if (!isset($indexes[""])) {
-                        $indexes[""] = new Index();
+                        $indexes[""] = new IndexEntity();
                     }
                     $indexes[""]->type = "PRIMARY";
                     $indexes[""]->columns = [$name];
@@ -271,7 +271,7 @@ class Server extends AbstractServer
         $query = "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = " . $this->quote($table);
         $results = $this->db->keyValues($query, $connection);
         foreach ($this->db->rows("PRAGMA index_list(" . $this->table($table) . ")", $connection) as $row) {
-            $index = new Index();
+            $index = new IndexEntity();
 
             $name = $row["name"];
             $index->type = $row["unique"] ? "UNIQUE" : "INDEX";
@@ -304,7 +304,7 @@ class Server extends AbstractServer
         foreach ($this->db->rows("PRAGMA foreign_key_list(" . $this->table($table) . ")") as $row) {
             $name = $row["id"];
             if (!isset($foreignKeys[$name])) {
-                $foreignKeys[$name] = new ForeignKey();
+                $foreignKeys[$name] = new ForeignKeyEntity();
             }
             //! idf_unescape in SQLite2
             $foreignKeys[$name]->source[] = $row["from"];
