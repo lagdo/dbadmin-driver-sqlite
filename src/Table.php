@@ -388,38 +388,6 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function truncateTables(array $tables)
-    {
-        return $this->driver->applyQueries("DELETE FROM", $tables);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function dropViews(array $views)
-    {
-        return $this->driver->applyQueries("DROP VIEW", $views);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function dropTables(array $tables)
-    {
-        return $this->driver->applyQueries("DROP TABLE", $tables);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function moveTables(array $tables, array $views, string $target)
-    {
-        return false;
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function trigger(string $trigger)
     {
         if ($trigger == "") {
