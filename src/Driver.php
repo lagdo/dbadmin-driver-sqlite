@@ -30,10 +30,10 @@ class Driver extends AbstractDriver
     {
         $connection = null;
         if (class_exists("SQLite3")) {
-            $connection = new Sqlite\Connection($this, $this->util, 'SQLite3');
+            $connection = new Db\Sqlite\Connection($this, $this->util, 'SQLite3');
         }
         elseif (extension_loaded("pdo_sqlite")) {
-            $connection = new Pdo\Connection($this, $this->util, 'PDO_SQLite');
+            $connection = new Db\Pdo\Connection($this, $this->util, 'PDO_SQLite');
         }
         else {
             throw new AuthException($this->util->lang('No package installed to open a Sqlite database.'));
@@ -43,10 +43,10 @@ class Driver extends AbstractDriver
             $this->connection = $connection;
             // By default, connect to the in memory database.
             $this->connection->open(':memory:', $this->options());
-            $this->server = new Server($this, $this->util, $connection);
-            $this->table = new Table($this, $this->util, $connection);
-            $this->query = new Query($this, $this->util, $connection);
-            $this->grammar = new Grammar($this, $this->util, $connection);
+            $this->server = new Db\Server($this, $this->util, $connection);
+            $this->table = new Db\Table($this, $this->util, $connection);
+            $this->query = new Db\Query($this, $this->util, $connection);
+            $this->grammar = new Db\Grammar($this, $this->util, $connection);
         }
 
         return $connection;
