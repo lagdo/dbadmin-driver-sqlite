@@ -8,7 +8,7 @@ trait ConnectionTrait
 
     public function selectDatabase($database)
     {
-        $options = $this->db->options();
+        $options = $this->driver->options();
         $filename = $this->filename($database, $options);
         $opened = $this->open($filename, $options);
         if ($opened) {

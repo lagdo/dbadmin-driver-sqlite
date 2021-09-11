@@ -14,7 +14,7 @@ class Connection extends AbstractConnection
     /**
      * @inheritDoc
      */
-    public function open($filename, array $options)
+    public function open(string $filename, array $options)
     {
         $this->client = new SQLite3($filename);
         return true;
@@ -29,34 +29,46 @@ class Connection extends AbstractConnection
         return $version["versionString"];
     }
 
-    public function query($query, $unbuffered = false)
+    /**
+     * @inheritDoc
+     */
+    public function query(string $query, bool $unbuffered = false)
     {
         $result = @$this->client->query($query);
-        $this->db->setError();
+        $this->driver->setError();
         if (!$result) {
-            $this->db->setErrno($this->client->lastErrorCode());
-            $this->db->setError($this->client->lastErrorMsg());
+            $this->driver->setErrno($this->client->lastErrorCode());
+            $this->driver->setError($this->client->lastErrorMsg());
             return false;
         } elseif ($result->numColumns()) {
             return new Statement($result);
         }
-        $this->db->setAffectedRows($this->client->changes());
+        $this->driver->setAffectedRows($this->client->changes());
         return true;
     }
 
-    public function quote($string)
+    /**
+     * @inheritDoc
+     */
+    public function quote(string $string)
     {
         return ($this->util->isUtf8($string) ?
             "'" . $this->client->escapeString($string) . "'" :
             "x'" . reset(unpack('H*', $string)) . "'");
     }
 
+    /**
+     * @inheritDoc
+     */
     public function storedResult()
     {
         return $this->result;
     }
 
-    public function result($query, $field = 0)
+    /**
+     * @inheritDoc
+     */
+    public function result(string $query, int $field = 0)
     {
         $result = $this->query($query);
         if (!is_object($result)) {

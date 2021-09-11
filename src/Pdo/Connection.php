@@ -14,7 +14,7 @@ class Connection extends PdoConnection
     /**
      * @inheritDoc
      */
-    public function open($filename, array $options)
+    public function open(string $filename, array $options)
     {
         $this->dsn("sqlite:$filename", "", "");
         return true;
