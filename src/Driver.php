@@ -2,14 +2,7 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite;
 
-use Lagdo\DbAdmin\Driver\Entity\TableFieldEntity;
-use Lagdo\DbAdmin\Driver\Entity\TableEntity;
-use Lagdo\DbAdmin\Driver\Entity\IndexEntity;
-use Lagdo\DbAdmin\Driver\Entity\ForeignKeyEntity;
-use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
-use Lagdo\DbAdmin\Driver\Entity\RoutineEntity;
-
-use Lagdo\DbAdmin\Driver\Db\ConnectionInterface;
+use Lagdo\DbAdmin\Driver\Exception\AuthException;
 
 use Lagdo\DbAdmin\Driver\Driver as AbstractDriver;
 
@@ -63,19 +56,19 @@ class Driver extends AbstractDriver
     /**
      * @inheritDoc
      */
-    protected function setConfig()
+    protected function initConfig()
     {
         $this->config->jush = 'sqlite';
         $this->config->drivers = ["SQLite3", "PDO_SQLite"];
 
-        $types = [ //! arrays
+        $groups = [ //! arrays
             $this->util->lang('Numbers') => ["integer" => 0, "real" => 0, "numeric" => 0],
             $this->util->lang('Strings') => ["text" => 0],
             $this->util->lang('Binary') => ["blob" => 0],
         ];
-        foreach ($types as $group => $_types) {
-            $this->config->structuredTypes[$group] = array_keys($_types);
-            $this->config->types = array_merge($this->config->types, $_types);
+        foreach ($groups as $name => $types) {
+            $this->config->structuredTypes[$name] = array_keys($types);
+            $this->config->types = array_merge($this->config->types, $types);
         }
 
         // $this->config->unsigned = [];

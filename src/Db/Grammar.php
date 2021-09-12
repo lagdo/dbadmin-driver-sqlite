@@ -2,15 +2,6 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
-use Lagdo\DbAdmin\Driver\Entity\TableFieldEntity;
-use Lagdo\DbAdmin\Driver\Entity\TableEntity;
-use Lagdo\DbAdmin\Driver\Entity\IndexEntity;
-use Lagdo\DbAdmin\Driver\Entity\ForeignKeyEntity;
-use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
-use Lagdo\DbAdmin\Driver\Entity\RoutineEntity;
-
-use Lagdo\DbAdmin\Driver\Db\ConnectionInterface;
-
 use Lagdo\DbAdmin\Driver\Db\Grammar as AbstractGrammar;
 
 class Grammar extends AbstractGrammar
@@ -55,7 +46,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function createTableSql(string $table, bool $autoIncrement, string $style)
+    public function sqlForCreateTable(string $table, bool $autoIncrement, string $style)
     {
         $query = $this->connection->result("SELECT sql FROM sqlite_master " .
             "WHERE type IN ('table', 'view') AND name = " . $this->quote($table));
@@ -63,10 +54,10 @@ class Grammar extends AbstractGrammar
             if ($name == '') {
                 continue;
             }
-            $query .= ";\n\n" . $this->createIndexSql($table, $index->type, $name,
-                "(" . implode(", ", array_map(function ($key) {
-                    return $this->escapeId($key);
-                }, $index->columns)) . ")");
+            $columns = implode(", ", array_map(function ($key) {
+                return $this->escapeId($key);
+            }, $index->columns));
+            $query .= ";\n\n" . $this->sqlForCreateIndex($table, $index->type, $name, "($columns)");
         }
         return $query;
     }
@@ -74,7 +65,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function createIndexSql(string $table, string $type, string $name, array $columns)
+    public function sqlForCreateIndex(string $table, string $type, string $name, string $columns)
     {
         return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
             $this->escapeId($name != "" ? $name : uniqid($table . "_")) .
@@ -84,7 +75,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function truncateTableSql(string $table)
+    public function sqlForTruncateTable(string $table)
     {
         return "DELETE FROM " . $this->table($table);
     }
@@ -92,7 +83,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function createTriggerSql(string $table)
+    public function sqlForCreateTrigger(string $table)
     {
         $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->quote($table);
         return implode($this->driver->values($query));

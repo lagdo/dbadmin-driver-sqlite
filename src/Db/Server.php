@@ -2,15 +2,6 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
-use Lagdo\DbAdmin\Driver\Entity\TableFieldEntity;
-use Lagdo\DbAdmin\Driver\Entity\TableEntity;
-use Lagdo\DbAdmin\Driver\Entity\IndexEntity;
-use Lagdo\DbAdmin\Driver\Entity\ForeignKeyEntity;
-use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
-use Lagdo\DbAdmin\Driver\Entity\RoutineEntity;
-
-use Lagdo\DbAdmin\Driver\Db\ConnectionInterface;
-
 use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
 
 use DirectoryIterator;
@@ -75,7 +66,7 @@ class Server extends AbstractServer
      */
     public function databaseCollation(string $database, array $collations)
     {
-        // there is no database list so $database == $this->driver->selectedDatabase()
+        // there is no database list so $database == $this->driver->database()
         return $this->connection->result("PRAGMA encoding");
     }
 
@@ -188,7 +179,7 @@ class Server extends AbstractServer
             return false;
         }
         $this->driver->setError($this->util->lang('File exists.'));
-        return @rename($this->filename($this->driver->selectedDatabase(), $options), $filename);
+        return @rename($this->filename($this->driver->database(), $options), $filename);
     }
 
     /**

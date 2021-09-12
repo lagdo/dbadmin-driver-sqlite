@@ -6,8 +6,6 @@ use Lagdo\DbAdmin\Driver\Entity\TableFieldEntity;
 use Lagdo\DbAdmin\Driver\Entity\TableEntity;
 use Lagdo\DbAdmin\Driver\Entity\IndexEntity;
 use Lagdo\DbAdmin\Driver\Entity\ForeignKeyEntity;
-use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
-use Lagdo\DbAdmin\Driver\Entity\RoutineEntity;
 
 use Lagdo\DbAdmin\Driver\Db\ConnectionInterface;
 
@@ -377,7 +375,7 @@ class Table extends AbstractTable
         foreach (array_reverse($alter) as $val) {
             if (!$this->driver->queries(
                 $val[2] == "DROP" ? "DROP INDEX " . $this->driver->escapeId($val[1]) :
-                $this->driver->createIndexSql($table, $val[0], $val[1], "(" . implode(", ", $val[2]) . ")")
+                $this->driver->sqlForCreateIndex($table, $val[0], $val[1], "(" . implode(", ", $val[2]) . ")")
             )) {
                 return false;
             }

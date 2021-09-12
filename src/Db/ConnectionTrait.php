@@ -6,7 +6,7 @@ trait ConnectionTrait
 {
     use ConfigTrait;
 
-    public function selectDatabase($database)
+    public function selectDatabase(string $database)
     {
         $options = $this->driver->options();
         $filename = $this->filename($database, $options);
