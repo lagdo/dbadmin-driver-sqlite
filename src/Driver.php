@@ -23,23 +23,23 @@ class Driver extends AbstractDriver
     {
         $connection = null;
         if (class_exists("SQLite3")) {
-            $connection = new Db\Sqlite\Connection($this, $this->util, 'SQLite3');
+            $connection = new Db\Sqlite\Connection($this, $this->util, $this->trans, 'SQLite3');
         }
         elseif (extension_loaded("pdo_sqlite")) {
-            $connection = new Db\Pdo\Connection($this, $this->util, 'PDO_SQLite');
+            $connection = new Db\Pdo\Connection($this, $this->util, $this->trans, 'PDO_SQLite');
         }
         else {
-            throw new AuthException($this->util->lang('No package installed to open a Sqlite database.'));
+            throw new AuthException($this->trans->lang('No package installed to open a Sqlite database.'));
         }
 
         if ($this->connection === null) {
             $this->connection = $connection;
             // By default, connect to the in memory database.
             $this->connection->open(':memory:', $this->options());
-            $this->server = new Db\Server($this, $this->util, $connection);
-            $this->table = new Db\Table($this, $this->util, $connection);
-            $this->query = new Db\Query($this, $this->util, $connection);
-            $this->grammar = new Db\Grammar($this, $this->util, $connection);
+            $this->server = new Db\Server($this, $this->util, $this->trans, $connection);
+            $this->table = new Db\Table($this, $this->util, $this->trans, $connection);
+            $this->query = new Db\Query($this, $this->util, $this->trans, $connection);
+            $this->grammar = new Db\Grammar($this, $this->util, $this->trans, $connection);
         }
 
         return $connection;
@@ -62,9 +62,9 @@ class Driver extends AbstractDriver
         $this->config->drivers = ["SQLite3", "PDO_SQLite"];
 
         $groups = [ //! arrays
-            $this->util->lang('Numbers') => ["integer" => 0, "real" => 0, "numeric" => 0],
-            $this->util->lang('Strings') => ["text" => 0],
-            $this->util->lang('Binary') => ["blob" => 0],
+            $this->trans->lang('Numbers') => ["integer" => 0, "real" => 0, "numeric" => 0],
+            $this->trans->lang('Strings') => ["text" => 0],
+            $this->trans->lang('Binary') => ["blob" => 0],
         ];
         foreach ($groups as $name => $types) {
             $this->config->structuredTypes[$name] = array_keys($types);

@@ -30,7 +30,7 @@ class Server extends AbstractServer
         foreach($iterator as $file)
         {
             // Skip everything except Sqlite files
-            if(!$file->isFile() || !$this->checkSqliteName($filename = $file->getFilename()))
+            if(!$file->isFile() || !$this->validateName($filename = $file->getFilename()))
             {
                 continue;
             }
@@ -115,7 +115,7 @@ class Server extends AbstractServer
      *
      * @return bool
      */
-    private function checkSqliteName(string $name)
+    private function validateName(string $name)
     {
         // Avoid creating PHP files on unsecured servers
         return preg_match("~^[^\\0]*\\.({$this->extensions})\$~", $name);
@@ -129,11 +129,11 @@ class Server extends AbstractServer
         $options = $this->driver->options();
         $filename = $this->filename($database, $options);
         if (file_exists($filename)) {
-            $this->driver->setError($this->util->lang('File exists.'));
+            $this->driver->setError($this->trans->lang('File exists.'));
             return false;
         }
-        if (!$this->checkSqliteName($filename)) {
-            $this->driver->setError($this->util->lang('Please use one of the extensions %s.',
+        if (!$this->validateName($filename)) {
+            $this->driver->setError($this->trans->lang('Please use one of the extensions %s.',
                 str_replace("|", ", ", $this->extensions)));
             return false;
         }
@@ -159,7 +159,7 @@ class Server extends AbstractServer
         foreach ($databases as $database) {
             $filename = $this->filename($database, $options);
             if (!@unlink($filename)) {
-                $this->driver->setError($this->util->lang('File exists.'));
+                $this->driver->setError($this->trans->lang('File exists.'));
                 return false;
             }
         }
@@ -173,12 +173,12 @@ class Server extends AbstractServer
     {
         $options = $this->driver->options();
         $filename = $this->filename($database, $options);
-        if (!$this->checkSqliteName($filename)) {
-            $this->driver->setError($this->util->lang('Please use one of the extensions %s.',
+        if (!$this->validateName($filename)) {
+            $this->driver->setError($this->trans->lang('Please use one of the extensions %s.',
                 str_replace("|", ", ", $this->extensions)));
             return false;
         }
-        $this->driver->setError($this->util->lang('File exists.'));
+        $this->driver->setError($this->trans->lang('File exists.'));
         return @rename($this->filename($this->driver->database(), $options), $filename);
     }
 
