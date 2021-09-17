@@ -14,6 +14,10 @@ trait ConfigTrait
      */
     private function filename($database, $options)
     {
+        // By default, connect to the in memory database.
+        if (!$database) {
+            return ':memory:';
+        }
         return rtrim($options['directory'], '/\\') . "/$database";
     }
 }

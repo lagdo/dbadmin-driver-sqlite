@@ -6,18 +6,7 @@ trait ConnectionTrait
 {
     use ConfigTrait;
 
-    public function selectDatabase(string $database)
-    {
-        $options = $this->driver->options();
-        $filename = $this->filename($database, $options);
-        $opened = $this->open($filename, $options);
-        if ($opened) {
-            $this->query("PRAGMA foreign_keys = 1");
-        }
-        return $opened;
-    }
-
-    public function multiQuery($query)
+    public function multiQuery(string $query)
     {
         return $this->result = $this->query($query);
     }

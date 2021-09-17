@@ -44,10 +44,8 @@ class Server extends AbstractServer
      */
     public function databaseSize(string $database)
     {
-        $options = $this->driver->options();
-        $filename = $this->filename($database, $options);
         $connection = $this->driver->createConnection(); // New connection
-        $connection->open($filename, $options);
+        $connection->open($database);
         $pageSize = 0;
         $statement = $connection->query('pragma page_size');
         if (is_object($statement) && ($row = $statement->fetchRow())) {
@@ -84,14 +82,13 @@ class Server extends AbstractServer
      */
     public function countTables(array $databases)
     {
-        $options = $this->driver->options();
         $connection = $this->driver->createConnection(); // New connection
         $counts = [];
+        $query = "SELECT count(*) FROM sqlite_master WHERE type IN ('table', 'view')";
         foreach ($databases as $database) {
             $counts[$database] = 0;
-            $filename = $this->filename($database, $options);
-            $connection->open($filename, $options);
-            $statement = $connection->query("SELECT count(*) FROM sqlite_master WHERE type IN ('table', 'view')");
+            $connection->open($database);
+            $statement = $connection->query($query);
             if (is_object($statement) && ($row = $statement->fetchRow())) {
                 $counts[$database] = intval($row[0]);
             }
@@ -139,7 +136,7 @@ class Server extends AbstractServer
         }
         try {
             $connection = $this->driver->createConnection(); // New connection
-            $connection->open($filename, $options);
+            $connection->open($database);
         } catch (Exception $ex) {
             $this->driver->setError($ex->getMessage());
             return false;

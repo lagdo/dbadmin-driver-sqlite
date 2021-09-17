@@ -34,8 +34,6 @@ class Driver extends AbstractDriver
 
         if ($this->connection === null) {
             $this->connection = $connection;
-            // By default, connect to the in memory database.
-            $this->connection->open(':memory:', $this->options());
             $this->server = new Db\Server($this, $this->util, $this->trans, $connection);
             $this->table = new Db\Table($this, $this->util, $this->trans, $connection);
             $this->query = new Db\Query($this, $this->util, $this->trans, $connection);
@@ -43,6 +41,14 @@ class Driver extends AbstractDriver
         }
 
         return $connection;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function connect(string $database, string $schema)
+    {
+        parent::connect($database, $schema);
     }
 
     /**

@@ -14,9 +14,12 @@ class Connection extends AbstractConnection
     /**
      * @inheritDoc
      */
-    public function open(string $filename, array $options)
+    public function open(string $database, string $schema = '')
     {
+        $options = $this->driver->options();
+        $filename = $this->filename($database, $options);
         $this->client = new SQLite3($filename);
+        $this->query("PRAGMA foreign_keys = 1");
         return true;
     }
 
