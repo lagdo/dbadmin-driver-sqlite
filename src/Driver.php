@@ -9,6 +9,67 @@ use Lagdo\DbAdmin\Driver\Driver as AbstractDriver;
 class Driver extends AbstractDriver
 {
     /**
+     * Driver features
+     *
+     * @var array
+     */
+    private $features = ['columns', 'database', 'drop_col', 'dump', 'indexes', 'descidx',
+        'move_col', 'sql', 'status', 'table', 'trigger', 'variables', 'view', 'view_trigger'];
+
+    /**
+     * Data types
+     *
+     * @var array
+     */
+    private $types = [ //! arrays
+        'Numbers' => ["integer" => 0, "real" => 0, "numeric" => 0],
+        'Strings' => ["text" => 0],
+        'Binary' => ["blob" => 0],
+    ];
+
+    /**
+     * Number variants
+     *
+     * @var array
+     */
+    private $unsigned = [];
+
+    /**
+     * Operators used in select
+     *
+     * @var array
+     */
+    private $operators = ["=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%",
+        "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"]; // REGEXP can be user defined function;
+
+    /**
+     * Functions used in select
+     *
+     * @var array
+     */
+    private $functions = ["hex", "length", "lower", "round", "unixepoch", "upper"];
+
+    /**
+     * Grouping functions used in select
+     *
+     * @var array
+     */
+    private $grouping = ["avg", "count", "count distinct", "group_concat", "max", "min", "sum"];
+
+    /**
+     * Functions used to edit data
+     *
+     * @var array
+     */
+    private $editFunctions = [[
+        // "text" => "date('now')/time('now')/datetime('now')",
+    ],[
+        "integer|real|numeric" => "+/-",
+        // "text" => "date/time/datetime",
+        "text" => "||",
+    ]];
+
+    /**
      * @inheritDoc
      */
     public function name()
@@ -56,7 +117,7 @@ class Driver extends AbstractDriver
      */
     public function support(string $feature)
     {
-        return preg_match('~^(columns|database|drop_col|dump|indexes|descidx|move_col|sql|status|table|trigger|variables|view|view_trigger)$~', $feature);
+        return in_array($feature, $this->features);
     }
 
     /**
@@ -67,26 +128,15 @@ class Driver extends AbstractDriver
         $this->config->jush = 'sqlite';
         $this->config->drivers = ["SQLite3", "PDO_SQLite"];
 
-        $groups = [ //! arrays
-            $this->trans->lang('Numbers') => ["integer" => 0, "real" => 0, "numeric" => 0],
-            $this->trans->lang('Strings') => ["text" => 0],
-            $this->trans->lang('Binary') => ["blob" => 0],
-        ];
-        foreach ($groups as $name => $types) {
-            $this->config->structuredTypes[$name] = array_keys($types);
+        foreach ($this->types as $group => $types) {
+            $this->config->structuredTypes[$this->trans->lang($group)] = array_keys($types);
             $this->config->types = array_merge($this->config->types, $types);
         }
 
         // $this->config->unsigned = [];
-        $this->config->operators = ["=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%", "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"]; // REGEXP can be user defined function;
-        $this->config->functions = ["hex", "length", "lower", "round", "unixepoch", "upper"];
-        $this->config->grouping = ["avg", "count", "count distinct", "group_concat", "max", "min", "sum"];
-        $this->config->editFunctions = [[
-            // "text" => "date('now')/time('now')/datetime('now')",
-        ],[
-            "integer|real|numeric" => "+/-",
-            // "text" => "date/time/datetime",
-            "text" => "||",
-        ]];
+        $this->config->operators = $this->operators;
+        $this->config->functions = $this->functions;
+        $this->config->grouping = $this->grouping;
+        $this->config->editFunctions = $this->editFunctions;
     }
 }
