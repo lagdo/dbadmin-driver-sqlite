@@ -14,31 +14,31 @@ class Statement implements StatementInterface
      *
      * @var SQLite3Result
      */
-    public $result;
+    protected $result = null;
 
     /**
      * Undocumented variable
      *
      * @var int
      */
-    public $offset = 0;
-
-    /**
-     * Undocumented variable
-     *
-     * @var int
-     */
-    public $numRows;
+    protected $offset = 0;
 
     /**
      * The constructor
      *
      * @param SQLite3Result $result
      */
-    public function __construct($result)
+    public function __construct(SQLite3Result $result)
     {
         $this->result = $result;
-        $this->numRows = $result->numColumns();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function rowCount()
+    {
+        return $this->result->numColumns();
     }
 
     /**

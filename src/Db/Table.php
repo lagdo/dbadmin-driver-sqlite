@@ -221,23 +221,23 @@ class Table extends AbstractTable
         }
         if (!$use_all_fields) {
             foreach ($alter as $val) {
-                if (!$this->driver->queries("ALTER TABLE " . $this->driver->table($table) . " $val")) {
+                if (!$this->driver->execute("ALTER TABLE " . $this->driver->table($table) . " $val")) {
                     return false;
                 }
             }
-            if ($table != $name && !$this->driver->queries("ALTER TABLE " . $this->driver->table($table) . " RENAME TO " . $this->driver->table($name))) {
+            if ($table != $name && !$this->driver->execute("ALTER TABLE " . $this->driver->table($table) . " RENAME TO " . $this->driver->table($name))) {
                 return false;
             }
         } elseif (!$this->recreateTable($table, $name, $alter, $originals, $foreign, $autoIncrement)) {
             return false;
         }
         if ($autoIncrement) {
-            $this->driver->queries("BEGIN");
-            $this->driver->queries("UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = " . $this->driver->quote($name)); // ignores error
+            $this->driver->execute("BEGIN");
+            $this->driver->execute("UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = " . $this->driver->quote($name)); // ignores error
             if (!$this->driver->affectedRows()) {
-                $this->driver->queries("INSERT INTO sqlite_sequence (name, seq) VALUES (" . $this->driver->quote($name) . ", $autoIncrement)");
+                $this->driver->execute("INSERT INTO sqlite_sequence (name, seq) VALUES (" . $this->driver->quote($name) . ", $autoIncrement)");
             }
-            $this->driver->queries("COMMIT");
+            $this->driver->execute("COMMIT");
         }
         return true;
     }
@@ -312,19 +312,19 @@ class Table extends AbstractTable
                     $foreign[] = " " . $this->driver->formatForeignKey($foreignKey);
                 }
             }
-            $this->driver->queries("BEGIN");
+            $this->driver->execute("BEGIN");
         }
         foreach ($fields as $key => $field) {
             $fields[$key] = "  " . implode($field);
         }
         $fields = array_merge($fields, array_filter($foreign));
         $tempName = ($table == $name ? "adminer_$name" : $name);
-        if (!$this->driver->queries("CREATE TABLE " . $this->driver->table($tempName) . " (\n" . implode(",\n", $fields) . "\n)")) {
+        if (!$this->driver->execute("CREATE TABLE " . $this->driver->table($tempName) . " (\n" . implode(",\n", $fields) . "\n)")) {
             // implicit ROLLBACK to not overwrite $this->driver->error()
             return false;
         }
         if ($table != "") {
-            if ($originals && !$this->driver->queries("INSERT INTO " . $this->driver->table($tempName) .
+            if ($originals && !$this->driver->execute("INSERT INTO " . $this->driver->table($tempName) .
                 " (" . implode(", ", $originals) . ") SELECT " . implode(
                     ", ",
                     array_map(function ($key) {
@@ -343,21 +343,21 @@ class Table extends AbstractTable
                 $this->connection->result("SELECT seq FROM sqlite_sequence WHERE name = " .
                 $this->driver->quote($table)); // if $autoIncrement is set then it will be updated later
             // drop before creating indexes and triggers to allow using old names
-            if (!$this->driver->queries("DROP TABLE " . $this->driver->table($table)) ||
-                ($table == $name && !$this->driver->queries("ALTER TABLE " . $this->driver->table($tempName) .
+            if (!$this->driver->execute("DROP TABLE " . $this->driver->table($table)) ||
+                ($table == $name && !$this->driver->execute("ALTER TABLE " . $this->driver->table($tempName) .
                 " RENAME TO " . $this->driver->table($name))) || !$this->alterIndexes($name, $indexes)
             ) {
                 return false;
             }
             if ($autoIncrement) {
-                $this->driver->queries("UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = " . $this->driver->quote($name)); // ignores error
+                $this->driver->execute("UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = " . $this->driver->quote($name)); // ignores error
             }
             foreach ($triggers as $trigger) {
-                if (!$this->driver->queries($trigger)) {
+                if (!$this->driver->execute($trigger)) {
                     return false;
                 }
             }
-            $this->driver->queries("COMMIT");
+            $this->driver->execute("COMMIT");
         }
         return true;
     }
@@ -373,8 +373,8 @@ class Table extends AbstractTable
             }
         }
         foreach (array_reverse($alter) as $val) {
-            if (!$this->driver->queries(
-                $val[2] == "DROP" ? "DROP INDEX " . $this->driver->escapeId($val[1]) :
+            if (!$this->driver->execute($val[2] == "DROP" ?
+                "DROP INDEX " . $this->driver->escapeId($val[1]) :
                 $this->driver->sqlForCreateIndex($table, $val[0], $val[1], "(" . implode(", ", $val[2]) . ")")
             )) {
                 return false;

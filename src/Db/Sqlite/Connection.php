@@ -80,7 +80,7 @@ class Connection extends AbstractConnection
         if (!is_object($result)) {
             return false;
         }
-        $row = $result->result->fetchArray();
+        $row = $result->fetchRow();
         return is_array($row) && array_key_exists($field, $row) ? $row[$field] : false;
     }
 }

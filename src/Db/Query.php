@@ -17,7 +17,7 @@ class Query extends AbstractQuery
         foreach ($rows as $set) {
             $values[] = "(" . implode(", ", $set) . ")";
         }
-        return $this->driver->queries("REPLACE INTO " . $this->driver->table($table) .
+        return $this->driver->execute("REPLACE INTO " . $this->driver->table($table) .
             " (" . implode(", ", array_keys(reset($rows))) . ") VALUES\n" . implode(",\n", $values));
     }
 
@@ -49,7 +49,7 @@ class Query extends AbstractQuery
      */
     public function begin()
     {
-        return $this->driver->queries("BEGIN");
+        return $this->driver->execute("BEGIN");
     }
 
     /**
