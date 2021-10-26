@@ -1,3 +1,10 @@
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/lagdo/dbadmin-driver-sqlite/badges/quality-score.png?b=main)](https://scrutinizer-ci.com/g/lagdo/dbadmin-driver-sqlite/?branch=main)
+[![StyleCI](https://styleci.io/repos/400403244/shield?branch=main)](https://styleci.io/repos/400403244)
+
+[![Latest Stable Version](https://poser.pugx.org/lagdo/dbadmin-driver-sqlite/v/stable)](https://packagist.org/packages/lagdo/dbadmin-driver-sqlite)
+[![Total Downloads](https://poser.pugx.org/lagdo/dbadmin-driver-sqlite/downloads)](https://packagist.org/packages/lagdo/dbadmin-driver-sqlite)
+[![License](https://poser.pugx.org/lagdo/dbadmin-driver-sqlite/license)](https://packagist.org/packages/lagdo/dbadmin-driver-sqlite)
+
 DbAdmin drivers for SQLite
 ==========================
 
