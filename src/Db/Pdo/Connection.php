@@ -3,11 +3,21 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Pdo;
 
 use Lagdo\DbAdmin\Driver\Db\Pdo\Connection as PdoConnection;
-use Lagdo\DbAdmin\Driver\Sqlite\Db\ConnectionTrait;
+use Lagdo\DbAdmin\Driver\Sqlite\Db\ConfigTrait;
 
 class Connection extends PdoConnection
 {
-    use ConnectionTrait;
+    use ConfigTrait;
+
+    public function multiQuery(string $query)
+    {
+        return $this->result = $this->query($query);
+    }
+
+    public function nextResult()
+    {
+        return false;
+    }
 
     /**
      * @inheritDoc
