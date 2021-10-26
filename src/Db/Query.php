@@ -35,10 +35,13 @@ class Query extends AbstractQuery
     public function view(string $name)
     {
         return [
-            "select" => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
+            'name' => $name,
+            'type' => 'VIEW',
+            'materialized' => false,
+            'select' => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
                 $this->connection->result("SELECT sql FROM sqlite_master WHERE name = " .
                 $this->driver->quote($name)))
-            ]; //! identifiers may be inside []
+        ]; //! identifiers may be inside []
     }
 
     /**
