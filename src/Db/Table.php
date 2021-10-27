@@ -27,26 +27,58 @@ class Table extends AbstractTable
     }
 
     /**
+     * @param string $table
+     *
+     * @return array
+     */
+    private function queryStatus(string $table = '')
+    {
+        $query = "SELECT name AS Name, type AS Engine, 'rowid' AS Oid, '' AS Auto_increment " .
+            "FROM sqlite_master WHERE type IN ('table', 'view') " .
+            ($table != "" ? "AND name = " . $this->driver->quote($table) : "ORDER BY name");
+        return $this->driver->rows($query);
+    }
+
+    /**
+     * @param array $row
+     *
+     * @return TableEntity
+     */
+    private function makeStatus(array $row)
+    {
+        $status = new TableEntity($row['Name']);
+        $status->engine = $row['Engine'];
+        $status->oid = $row['Oid'];
+        // $status->Auto_increment = $row['Auto_increment'];
+        $status->rows = $this->connection->result("SELECT COUNT(*) FROM " . $this->driver->escapeId($row["Name"]));
+        $tables[$row["Name"]] = $status;
+
+        return $status;
+    }
+
+    /**
      * @inheritDoc
      */
-    public function tableStatus(string $table = "", bool $fast = false)
+    public function tableStatus(string $table, bool $fast = false)
+    {
+        $rows = $this->queryStatus($table);
+        if (!($row = reset($rows))) {
+            return null;
+        }
+        return $this->makeStatus($row);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function tablesStatuses(bool $fast = false)
     {
         $tables = [];
-        $query = "SELECT name AS Name, type AS Engine, 'rowid' AS Oid, '' AS Auto_increment " .
-            "FROM sqlite_master WHERE type IN ('table', 'view') " . ($table != "" ? "AND name = " .
-            $this->driver->quote($table) : "ORDER BY name");
-        foreach ($this->driver->rows($query) as $row) {
-            $status = new TableEntity($row['Name']);
-            $status->engine = $row['Engine'];
-            $status->oid = $row['Oid'];
-            // $status->Auto_increment = $row['Auto_increment'];
-            $status->rows = $this->connection->result("SELECT COUNT(*) FROM " . $this->driver->escapeId($row["Name"]));
-            $tables[$row["Name"]] = $status;
+        $rows = $this->queryStatus();
+        foreach ($rows as $row) {
+            $tables[$row["Name"]] = $this->makeStatus($row);
         }
-        // foreach ($this->driver->rows("SELECT * FROM sqlite_sequence", null, "") as $row) {
-        //     $tables[$row["name"]]["Auto_increment"] = $row["seq"];
-        // }
-        return ($table != "" ? $tables[$table] : $tables);
+        return $tables;
     }
 
     /**
@@ -202,7 +234,7 @@ class Table extends AbstractTable
     public function alterTable(string $table, string $name, array $fields, array $foreign,
         string $comment, string $engine, string $collation, int $autoIncrement, string $partitioning)
     {
-        $use_all_fields = ($table == "" || $foreign);
+        $use_all_fields = ($table == "" || !empty($foreign));
         foreach ($fields as $field) {
             if ($field[0] != "" || !$field[1] || $field[2]) {
                 $use_all_fields = true;
@@ -253,15 +285,15 @@ class Table extends AbstractTable
      * @param integer $autoIncrement
      * @param array $indexes
      *
-     * @return void
+     * @return bool
      */
     protected function recreateTable(string $table, string $name, array $fields, array $originals,
         array $foreign, int $autoIncrement, array $indexes = [])
     {
         if ($table != "") {
-            if (!$fields) {
+            if (empty($fields)) {
                 foreach ($this->fields($table) as $key => $field) {
-                    if ($indexes) {
+                    if (!empty($indexes)) {
                         $field->autoIncrement = 0;
                     }
                     $fields[] = $this->util->processField($field, $field);
@@ -319,7 +351,8 @@ class Table extends AbstractTable
         }
         $fields = array_merge($fields, array_filter($foreign));
         $tempName = ($table == $name ? "adminer_$name" : $name);
-        if (!$this->driver->execute("CREATE TABLE " . $this->driver->table($tempName) . " (\n" . implode(",\n", $fields) . "\n)")) {
+        if (!$this->driver->execute("CREATE TABLE " . $this->driver->table($tempName) .
+            " (\n" . implode(",\n", $fields) . "\n)")) {
             // implicit ROLLBACK to not overwrite $this->driver->error()
             return false;
         }

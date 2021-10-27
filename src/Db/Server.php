@@ -115,7 +115,7 @@ class Server extends AbstractServer
     private function validateName(string $name)
     {
         // Avoid creating PHP files on unsecured servers
-        return preg_match("~^[^\\0]*\\.({$this->extensions})\$~", $name);
+        return (preg_match("~^[^\\0]*\\.({$this->extensions})\$~", $name));
     }
 
     /**
