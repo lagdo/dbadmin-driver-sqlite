@@ -83,10 +83,7 @@ class Driver extends AbstractDriver
     public function createConnection()
     {
         $connection = null;
-        if (class_exists("SQLite3")) {
-            $connection = new Db\Sqlite\Connection($this, $this->util, $this->trans, 'SQLite3');
-        }
-        elseif (extension_loaded("pdo_sqlite")) {
+        if (extension_loaded("pdo_sqlite")) {
             $connection = new Db\Pdo\Connection($this, $this->util, $this->trans, 'PDO_SQLite');
         }
         else {

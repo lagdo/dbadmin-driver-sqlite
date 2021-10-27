@@ -11,16 +11,6 @@ class Connection extends AbstractConnection
 {
     use ConfigTrait;
 
-    public function multiQuery(string $query)
-    {
-        return $this->result = $this->query($query);
-    }
-
-    public function nextResult()
-    {
-        return false;
-    }
-
     /**
      * @inheritDoc
      */
@@ -70,12 +60,23 @@ class Connection extends AbstractConnection
             "x'" . reset(unpack('H*', $string)) . "'");
     }
 
+    public function multiQuery(string $query)
+    {
+        $this->statement = $this->query($query);
+        return !(!$this->statement);
+    }
+
     /**
      * @inheritDoc
      */
     public function storedResult()
     {
-        return $this->result;
+        return $this->statement;
+    }
+
+    public function nextResult()
+    {
+        return false;
     }
 
     /**
@@ -83,14 +84,14 @@ class Connection extends AbstractConnection
      */
     public function result(string $query, int $field = -1)
     {
-        if ($field === -1) {
+        if ($field < 0) {
             $field = $this->defaultField();
         }
         $result = $this->query($query);
         if (!is_object($result)) {
-            return false;
+            return null;
         }
         $row = $result->fetchRow();
-        return is_array($row) && array_key_exists($field, $row) ? $row[$field] : false;
+        return is_array($row) && count($row) > $field ? $row[$field] : null;
     }
 }

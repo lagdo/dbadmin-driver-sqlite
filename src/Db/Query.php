@@ -17,8 +17,9 @@ class Query extends AbstractQuery
         foreach ($rows as $set) {
             $values[] = "(" . implode(", ", $set) . ")";
         }
-        return $this->driver->execute("REPLACE INTO " . $this->driver->table($table) .
+        $result = $this->driver->execute("REPLACE INTO " . $this->driver->table($table) .
             " (" . implode(", ", array_keys(reset($rows))) . ") VALUES\n" . implode(",\n", $values));
+        return $result == true;
     }
 
     /**
@@ -42,14 +43,6 @@ class Query extends AbstractQuery
                 $this->connection->result("SELECT sql FROM sqlite_master WHERE name = " .
                 $this->driver->quote($name)))
         ]; //! identifiers may be inside []
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function begin()
-    {
-        return $this->driver->execute("BEGIN");
     }
 
     /**
