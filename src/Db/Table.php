@@ -50,8 +50,8 @@ class Table extends AbstractTable
         $status->engine = $row['Engine'];
         $status->oid = $row['Oid'];
         // $status->Auto_increment = $row['Auto_increment'];
-        $status->rows = $this->connection->result("SELECT COUNT(*) FROM " . $this->driver->escapeId($row["Name"]));
-        $tables[$row["Name"]] = $status;
+        $query = 'SELECT COUNT(*) FROM ' . $this->driver->escapeId($row['Name']);
+        $status->rows = $this->connection->result($query);
 
         return $status;
     }
@@ -76,7 +76,7 @@ class Table extends AbstractTable
         $tables = [];
         $rows = $this->queryStatus();
         foreach ($rows as $row) {
-            $tables[$row["Name"]] = $this->makeStatus($row);
+            $tables[$row['Name']] = $this->makeStatus($row);
         }
         return $tables;
     }
@@ -86,7 +86,7 @@ class Table extends AbstractTable
      */
     public function isView(TableEntity $tableStatus)
     {
-        return $tableStatus->engine == "view";
+        return $tableStatus->engine == 'view';
     }
 
     /**
