@@ -6,6 +6,7 @@ use Lagdo\DbAdmin\Driver\Entity\TableFieldEntity;
 use Lagdo\DbAdmin\Driver\Entity\TableEntity;
 use Lagdo\DbAdmin\Driver\Entity\IndexEntity;
 use Lagdo\DbAdmin\Driver\Entity\ForeignKeyEntity;
+use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
 
 use Lagdo\DbAdmin\Driver\Db\ConnectionInterface;
 
@@ -419,25 +420,20 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function trigger(string $trigger)
+    public function trigger(string $name, string $table = '')
     {
-        if ($trigger == "") {
-            return ["Statement" => "BEGIN\n\t;\nEND"];
+        if ($name == "") {
+            return new TriggerEntity('', '', "BEGIN\n\t;\nEND");
         }
         $idf = '(?:[^`"\s]+|`[^`]*`|"[^"]*")+';
         $options = $this->triggerOptions();
         preg_match("~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $options["Timing"]) .
             ")\\s+([a-z]+)(?:\\s+OF\\s+($idf))?\\s+ON\\s*$idf\\s*(?:FOR\\s+EACH\\s+ROW\\s)?(.*)~is",
             $this->connection->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
-            $this->driver->quote($trigger)), $match);
+            $this->driver->quote($name)), $match);
         $of = $match[3];
-        return [
-            "Timing" => strtoupper($match[1]),
-            "Event" => strtoupper($match[2]) . ($of ? " OF" : ""),
-            "Of" => ($of[0] == '`' || $of[0] == '"' ? $this->driver->unescapeId($of) : $of),
-            "Trigger" => $trigger,
-            "Statement" => $match[4],
-        ];
+        return new TriggerEntity(strtoupper($match[1]), strtoupper($match[2]), $match[4],
+            ($of[0] == '`' || $of[0] == '"' ? $this->driver->unescapeId($of) : $of), $name);
     }
 
     /**
@@ -451,7 +447,7 @@ class Table extends AbstractTable
         foreach ($this->driver->rows($query) as $row) {
             preg_match('~^CREATE\s+TRIGGER\s*(?:[^`"\s]+|`[^`]*`|"[^"]*")+\s*(' .
                 implode("|", $options["Timing"]) . ')\s*(.*?)\s+ON\b~i', $row["sql"], $match);
-            $triggers[$row["name"]] = new Trigger($match[1], $match[2]);
+            $triggers[$row["name"]] = new TriggerEntity($match[1], $match[2], '', '', $row["name"]);
         }
         return $triggers;
     }
