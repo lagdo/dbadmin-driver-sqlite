@@ -2,14 +2,6 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
-use Lagdo\DbAdmin\Driver\Entity\TableFieldEntity;
-use Lagdo\DbAdmin\Driver\Entity\TableEntity;
-use Lagdo\DbAdmin\Driver\Entity\IndexEntity;
-use Lagdo\DbAdmin\Driver\Entity\ForeignKeyEntity;
-use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
-
-use Lagdo\DbAdmin\Driver\Db\ConnectionInterface;
-
 use Lagdo\DbAdmin\Driver\Db\Database as AbstractDatabase;
 
 class Database extends AbstractDatabase
@@ -157,7 +149,7 @@ class Database extends AbstractDatabase
             }
             $triggers = [];
             foreach ($this->driver->triggers($table) as $trigger_name => $timing_event) {
-                $trigger = $this->trigger($trigger_name);
+                $trigger = $this->driver->trigger($trigger_name);
                 $triggers[] = "CREATE TRIGGER " . $this->driver->escapeId($trigger_name) . " " .
                     implode(" ", $timing_event) . " ON " . $this->driver->table($name) . "\n$trigger[Statement]";
             }
