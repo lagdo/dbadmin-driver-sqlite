@@ -46,7 +46,7 @@ class Connection extends AbstractConnection
         } elseif ($result->numColumns() > 0) {
             return new Statement($result);
         }
-        $this->driver->setAffectedRows($this->client->changes());
+        $this->setAffectedRows($this->client->changes());
         return true;
     }
 

@@ -11,6 +11,18 @@ class Query extends AbstractQuery
     /**
      * @inheritDoc
      */
+    protected function limitToOne(string $table, string $query, string $where, string $separator = "\n")
+    {
+        return preg_match('~^INTO~', $query) ||
+            $this->connection->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
+            $this->driver->limit($query, $where, 1, 0, $separator) :
+            //! use primary key in tables with WITHOUT rowid
+            " $query WHERE rowid = (SELECT rowid FROM " . $this->driver->table($table) . $where . $separator . "LIMIT 1)";
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function insertOrUpdate(string $table, array $rows, array $primary)
     {
         $values = [];

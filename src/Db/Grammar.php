@@ -26,18 +26,6 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function limitToOne(string $table, string $query, string $where, string $separator = "\n")
-    {
-        return preg_match('~^INTO~', $query) ||
-            $this->connection->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
-            $this->limit($query, $where, 1, 0, $separator) :
-            //! use primary key in tables with WITHOUT rowid
-            " $query WHERE rowid = (SELECT rowid FROM " . $this->table($table) . $where . $separator . "LIMIT 1)";
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function autoIncrement()
     {
         return " PRIMARY KEY AUTOINCREMENT";
@@ -49,7 +37,7 @@ class Grammar extends AbstractGrammar
     public function sqlForCreateTable(string $table, bool $autoIncrement, string $style)
     {
         $query = $this->connection->result("SELECT sql FROM sqlite_master " .
-            "WHERE type IN ('table', 'view') AND name = " . $this->quote($table));
+            "WHERE type IN ('table', 'view') AND name = " . $this->driver->quote($table));
         foreach ($this->driver->indexes($table) as $name => $index) {
             if ($name == '') {
                 continue;
@@ -85,7 +73,8 @@ class Grammar extends AbstractGrammar
      */
     public function sqlForCreateTrigger(string $table)
     {
-        $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->quote($table);
+        $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " .
+            $this->driver->quote($table);
         return implode($this->driver->values($query));
     }
 }

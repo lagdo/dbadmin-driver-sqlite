@@ -71,34 +71,6 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function tables()
-    {
-        return $this->driver->keyValues("SELECT name, type FROM sqlite_master " .
-            "WHERE type IN ('table', 'view') ORDER BY (name = 'sqlite_sequence'), name");
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function countTables(array $databases)
-    {
-        $connection = $this->driver->createConnection(); // New connection
-        $counts = [];
-        $query = "SELECT count(*) FROM sqlite_master WHERE type IN ('table', 'view')";
-        foreach ($databases as $database) {
-            $counts[$database] = 0;
-            $connection->open($database);
-            $statement = $connection->query($query);
-            if (is_object($statement) && ($row = $statement->fetchRow())) {
-                $counts[$database] = intval($row[0]);
-            }
-        }
-        return $counts;
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function collations()
     {
         $create = $this->util->input()->hasTable();
@@ -177,38 +149,6 @@ class Server extends AbstractServer
         }
         $this->driver->setError($this->trans->lang('File exists.'));
         return @rename($this->filename($this->driver->database(), $options), $filename);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function truncateTables(array $tables)
-    {
-        return $this->driver->applyQueries("DELETE FROM", $tables);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function dropViews(array $views)
-    {
-        return $this->driver->applyQueries("DROP VIEW", $views);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function dropTables(array $tables)
-    {
-        return $this->driver->applyQueries("DROP TABLE", $tables);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function moveTables(array $tables, array $views, string $target)
-    {
-        return false;
     }
 
     /**
