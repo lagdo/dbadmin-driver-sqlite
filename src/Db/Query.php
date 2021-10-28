@@ -19,7 +19,7 @@ class Query extends AbstractQuery
         }
         $result = $this->driver->execute("REPLACE INTO " . $this->driver->table($table) .
             " (" . implode(", ", array_keys(reset($rows))) . ") VALUES\n" . implode(",\n", $values));
-        return $result == true;
+        return $result !== false;
     }
 
     /**

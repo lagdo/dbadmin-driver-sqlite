@@ -43,7 +43,7 @@ class Connection extends AbstractConnection
             $this->driver->setErrno($this->client->lastErrorCode());
             $this->driver->setError($this->client->lastErrorMsg());
             return false;
-        } elseif ($result->numColumns()) {
+        } elseif ($result->numColumns() > 0) {
             return new Statement($result);
         }
         $this->driver->setAffectedRows($this->client->changes());
