@@ -233,19 +233,21 @@ class Table extends AbstractTable
                 $primaryIndex->descs[] = (preg_match('~DESC~i', $match[5]) ? '1' : null);
             }
         }
-        if ($primaryIndex === null) {
-            foreach ($this->fields($table) as $name => $field) {
-                if ($field->primary) {
-                    if (!$primaryIndex) {
-                        $primaryIndex = new IndexEntity();
-                    }
-                    $primaryIndex->type = "PRIMARY";
-                    $primaryIndex->columns = [$name];
-                    $primaryIndex->lengths = [];
-                    $primaryIndex->descs = [null];
-                }
-            }
+        if ($primaryIndex !== null) {
+            return $primaryIndex;
         }
+        foreach ($this->fields($table) as $name => $field) {
+            if (!$field->primary) {
+                continue;
+            }
+            if ($primaryIndex === null) {
+                $primaryIndex = new IndexEntity();
+            }
+            $primaryIndex->type = "PRIMARY";
+            $primaryIndex->columns = [$name];
+            $primaryIndex->lengths = [];
+            $primaryIndex->descs = [null];
+    }
         return $primaryIndex;
     }
 
