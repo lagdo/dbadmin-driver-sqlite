@@ -304,6 +304,7 @@ class Table extends AbstractTable
             $this->driver->table($table) . ")", $connection);
         foreach ($rows as $row) {
             $index = $this->makeIndexEntity($row, $results, $table, $connection);
+            $name = $row["name"];
             if ($index->type === 'UNIQUE' && $index->columns == $primaryIndex->columns &&
                 $index->descs == $primaryIndex->descs && preg_match("~^sqlite_~", $name)) {
                 $indexes[$name] = $index;
