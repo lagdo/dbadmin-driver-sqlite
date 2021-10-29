@@ -312,6 +312,9 @@ class Table extends AbstractTable
                 $indexes[$name] = $index;
             }
         }
+        if ($primaryIndex !== null) {
+            $indexes[''] = $primaryIndex;
+        }
 
         return $indexes;
     }
