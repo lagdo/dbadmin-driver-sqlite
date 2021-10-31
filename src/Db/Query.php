@@ -15,9 +15,9 @@ class Query extends AbstractQuery
     {
         return preg_match('~^INTO~', $query) ||
             $this->connection->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
-            $this->driver->limit($query, $where, 1, 0, $separator) :
+            $this->driver->limit($query, $where, 1, 0) :
             //! use primary key in tables with WITHOUT rowid
-            " $query WHERE rowid = (SELECT rowid FROM " . $this->driver->table($table) . $where . $separator . "LIMIT 1)";
+            " $query WHERE rowid = (SELECT rowid FROM " . $this->driver->table($table) . $where . ' LIMIT 1)';
     }
 
     /**
