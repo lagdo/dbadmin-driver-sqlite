@@ -1,7 +1,7 @@
 {
     "name": "lagdo/dbadmin-driver-sqlite",
     "type": "library",
-    "description": "DbAdmin driver for SqLite.",
+    "description": "DbAdmin driver for SQLite.",
     "authors": [
         {
             "name": "Thierry Feuzeu",
@@ -10,7 +10,7 @@
     ],
     "homepage": "https://github.com/lagdo/dbadmin-driver-sqlite",
     "license": "Apache-2.0",
-    "keywords": ["Adminer", "Database", "Admin", "Dashboard", "Sql", "Sqlite"],
+    "keywords": ["Adminer", "Database", "Admin", "Dashboard", "SQL", "SQLite"],
     "support": {
         "issues": "https://github.com/lagdo/dbadmin-driver-sqlite/issues",
         "source": "https://github.com/lagdo/dbadmin-driver-sqlite"
