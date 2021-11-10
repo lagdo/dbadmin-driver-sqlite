@@ -2,75 +2,33 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
+use Lagdo\DbAdmin\Driver\Entity\TableEntity;
 use Lagdo\DbAdmin\Driver\Db\Database as AbstractDatabase;
 
 class Database extends AbstractDatabase
 {
     /**
-     * @inheritDoc
+     * Recreate a table
+     *
+     * @param TableEntity $tableAttrs
+     * @param string $table
+     *
+     * @return bool
      */
-    public function alterTable(string $table, string $name, array $fields, array $foreign,
-        string $comment, string $engine, string $collation, int $autoIncrement, string $partitioning)
+    private function recreateTable(TableEntity $tableAttrs, string $table = '')
     {
-        $use_all_fields = ($table == '' || !empty($foreign));
-        foreach ($fields as $field) {
-            if ($field[0] != '' || !$field[1] || $field[2]) {
-                $use_all_fields = true;
-                break;
-            }
-        }
         $alter = [];
         $originals = [];
-        foreach ($fields as $field) {
+        $indexes = [];
+        foreach ($tableAttrs->fields as $field) {
             if ($field[1]) {
-                $alter[] = ($use_all_fields ? $field[1] : 'ADD ' . implode($field[1]));
+                $alter[] = (\is_string($field[1]) ? $field[1] : 'ADD ' . implode($field[1]));
                 if ($field[0] != '') {
                     $originals[$field[0]] = $field[1][0];
                 }
             }
         }
-        if (!$use_all_fields) {
-            foreach ($alter as $val) {
-                if (!$this->driver->execute('ALTER TABLE ' . $this->driver->table($table) . " $val")) {
-                    return false;
-                }
-            }
-            if ($table != $name && !$this->driver->execute('ALTER TABLE ' .
-                $this->driver->table($table) . ' RENAME TO ' . $this->driver->table($name))) {
-                return false;
-            }
-        } elseif (!$this->recreateTable($table, $name, $alter, $originals, $foreign, $autoIncrement)) {
-            return false;
-        }
-        if ($autoIncrement) {
-            $this->driver->execute('BEGIN');
-            $this->driver->execute('UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = ' .
-                $this->driver->quote($name)); // ignores error
-            if (!$this->driver->affectedRows()) {
-                $this->driver->execute('INSERT INTO sqlite_sequence (name, seq) VALUES (' .
-                    $this->driver->quote($name) . ", $autoIncrement)");
-            }
-            $this->driver->execute('COMMIT');
-        }
-        return true;
-    }
 
-    /**
-     * Recreate a table
-     *
-     * @param string $table
-     * @param string $name
-     * @param array $fields
-     * @param array $originals
-     * @param array $foreign
-     * @param integer $autoIncrement
-     * @param array $indexes
-     *
-     * @return bool
-     */
-    protected function recreateTable(string $table, string $name, array $fields, array $originals,
-        array $foreign, int $autoIncrement, array $indexes = [])
-    {
         if ($table != '') {
             if (empty($fields)) {
                 foreach ($this->driver->fields($table) as $key => $field) {
@@ -177,22 +135,90 @@ class Database extends AbstractDatabase
     }
 
     /**
+     * @param string $table
+     * @param int $autoIncrement
+     *
+     * @return void
+     */
+    private function setAutoIncrement(string $table, int $autoIncrement)
+    {
+        if ($autoIncrement) {
+            $this->driver->execute('BEGIN');
+            $this->driver->execute("UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = " .
+                $this->driver->quote($table)); // ignores error
+            if (!$this->driver->affectedRows()) {
+                $this->driver->execute('INSERT INTO sqlite_sequence (name, seq) VALUES (' .
+                    $this->driver->quote($table) . ", $autoIncrement)");
+            }
+            $this->driver->execute('COMMIT');
+        }
+    }
+
+    /**
      * @inheritDoc
      */
-    public function alterIndexes(string $table, array $alter)
+    public function createTable(TableEntity $tableAttrs)
     {
-        foreach ($alter as $primary) {
-            if ($primary[0] == 'PRIMARY') {
-                return $this->recreateTable($table, $table, [], [], [], 0, $alter);
+        if (!$this->recreateTable($tableAttrs)) {
+            return false;
+        }
+        $this->setAutoIncrement($tableAttrs->name, $tableAttrs->autoIncrement);
+        return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function alterTable(string $table, TableEntity $tableAttrs)
+    {
+        $use_all_fields = !empty($tableAttrs->foreign);
+        foreach ($tableAttrs->fields as $field) {
+            if ($field[0] != '' || !$field[1] || $field[2]) {
+                $use_all_fields = true;
+                break;
             }
         }
-        foreach (array_reverse($alter) as $val) {
-            if (!$this->driver->execute($val[2] == 'DROP' ?
-                'DROP INDEX ' . $this->driver->escapeId($val[1]) :
-                $this->driver->sqlForCreateIndex($table, $val[0], $val[1], '(' . implode(', ', $val[2]) . ')')
-            )) {
+        if (!$use_all_fields) {
+            $alter = [];
+            foreach ($tableAttrs->fields as $field) {
+                if ($field[1]) {
+                    $alter[] = ($use_all_fields ? $field[1] : 'ADD ' . implode($field[1]));
+                }
+            }
+            foreach ($alter as $val) {
+                if (!$this->driver->execute('ALTER TABLE ' . $this->driver->table($table) . " $val")) {
+                    return false;
+                }
+            }
+            if ($table != $tableAttrs->name && !$this->driver->execute('ALTER TABLE ' .
+                $this->driver->table($table) . ' RENAME TO ' . $this->driver->table($tableAttrs->name))) {
                 return false;
             }
+        } elseif (!$this->recreateTable($tableAttrs, $table)) {
+            return false;
+        }
+        $this->setAutoIncrement($tableAttrs->name, $tableAttrs->autoIncrement);
+        return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function alterIndexes(string $table, array $alter, array $drop)
+    {
+        foreach ($alter as $index) {
+            if ($index->type == 'PRIMARY') {
+                // return $this->recreateTable($table, $table, [], [], [], 0, $alter);
+                // Do not alter primary keys, since it requires to recreate the table.
+                return false;
+            }
+        }
+        foreach (array_reverse($drop) as $index) {
+            $this->driver->execute('DROP INDEX ' . $this->driver->escapeId($index->name));
+        }
+        foreach (array_reverse($alter) as $index) {
+            $this->driver->execute($this->driver->sqlForCreateIndex($table,
+                $index->type, $index->name, '(' . implode(', ', $index->columns) . ')'));
         }
         return true;
     }
