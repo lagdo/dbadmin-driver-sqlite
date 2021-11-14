@@ -7,6 +7,8 @@ use Lagdo\DbAdmin\Driver\Sqlite\Db\ConfigTrait;
 
 use SQLite3;
 
+use function preg_match;
+
 class Connection extends AbstractConnection
 {
     use ConfigTrait;
@@ -37,6 +39,13 @@ class Connection extends AbstractConnection
      */
     public function query(string $query, bool $unbuffered = false)
     {
+        $space = $this->spaceRegex();
+        if (\preg_match("~^$space*+ATTACH\\b~i", $query, $match)) {
+            // PHP doesn't support setting SQLITE_LIMIT_ATTACHED
+            $this->driver->setError($this->trans->lang('ATTACH queries are not supported.'));
+            return false;
+        }
+
         $result = @$this->client->query($query);
         $this->driver->setError();
         if (!$result) {
