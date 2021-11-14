@@ -68,4 +68,12 @@ class Grammar extends AbstractGrammar
             $this->driver->quote($table);
         return implode($this->driver->values($query));
     }
+
+    /**
+     * @inheritDoc
+     */
+    protected function queryRegex()
+    {
+        return '\\s*|[\'"`[]|/\*|-- |$';
+    }
 }
