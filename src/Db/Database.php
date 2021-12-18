@@ -5,6 +5,11 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 use Lagdo\DbAdmin\Driver\Entity\TableEntity;
 use Lagdo\DbAdmin\Driver\Db\Database as AbstractDatabase;
 
+use function is_object;
+use function intval;
+use function implode;
+use function array_reverse;
+
 class Database extends AbstractDatabase
 {
     use RecreateTrait;
@@ -106,31 +111,25 @@ class Database extends AbstractDatabase
      */
     public function alterTable(string $table, TableEntity $tableAttrs)
     {
-        $use_all_fields = !empty($tableAttrs->foreign);
+        $clauses = [];
         foreach ($tableAttrs->fields as $field) {
-            if ($field[0] != '' || !$field[1] || $field[2]) {
-                $use_all_fields = true;
-                break;
+            if ($field[1]) {
+                $clauses[] = ($field[0] != ''  ? $field[1] : 'ADD ' . implode($field[1]));
             }
         }
-        if (!$use_all_fields) {
-            $alter = [];
-            foreach ($tableAttrs->fields as $field) {
-                if ($field[1]) {
-                    $alter[] = ($use_all_fields ? $field[1] : 'ADD ' . implode($field[1]));
-                }
-            }
-            foreach ($alter as $val) {
-                if (!$this->driver->execute('ALTER TABLE ' . $this->driver->table($table) . ' ' . $val)) {
-                    return false;
-                }
-            }
-            if ($table != $tableAttrs->name && !$this->driver->execute('ALTER TABLE ' .
-                    $this->driver->table($table) . ' RENAME TO ' . $this->driver->table($tableAttrs->name))) {
+        $queries = [];
+        foreach ($clauses as $clause) {
+            $queries[] = 'ALTER TABLE ' . $this->driver->table($table) . ' ' . $clause;
+        }
+        if ($table != $tableAttrs->name) {
+            $queries[] = 'ALTER TABLE ' . $this->driver->table($table) . ' RENAME TO ' .
+                $this->driver->table($tableAttrs->name);
+        }
+        // TODO: Wrap queries into a transaction
+        foreach ($queries as $query) {
+            if (!$this->driver->execute($query)) {
                 return false;
             }
-        } elseif (!$this->recreateTable($tableAttrs, $table)) {
-            return false;
         }
         $this->setAutoIncrement($tableAttrs->name, $tableAttrs->autoIncrement);
         return true;
@@ -141,19 +140,20 @@ class Database extends AbstractDatabase
      */
     public function alterIndexes(string $table, array $alter, array $drop)
     {
-        foreach ($alter as $index) {
-            if ($index->type == 'PRIMARY') {
-                // return $this->recreateTable($table, $table, [], [], [], 0, $alter);
-                // Do not alter primary keys, since it requires to recreate the table.
-                return false;
-            }
-        }
+        $queries = [];
         foreach (array_reverse($drop) as $index) {
-            $this->driver->execute('DROP INDEX ' . $this->driver->escapeId($index->name));
+            $queries[] = 'DROP INDEX ' . $this->driver->escapeId($index->name);
         }
         foreach (array_reverse($alter) as $index) {
-            $this->driver->execute($this->driver->sqlForCreateIndex($table,
-                $index->type, $index->name, '(' . implode(', ', $index->columns) . ')'));
+            // Can't alter primary keys
+            if ($index->type !== 'PRIMARY') {
+                $queries[] =  $this->driver->sqlForCreateIndex($table, $index->type,
+                    $index->name, '(' . implode(', ', $index->columns) . ')');
+            }
+        }
+        // TODO: Wrap queries into a transaction
+        foreach ($queries as $query) {
+            $this->driver->execute($query);
         }
         return true;
     }
