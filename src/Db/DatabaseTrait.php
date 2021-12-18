@@ -4,7 +4,7 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
 use Lagdo\DbAdmin\Driver\Entity\TableEntity;
 
-trait RecreateTrait
+trait DatabaseTrait
 {
     /**
      * Recreate a table
@@ -14,7 +14,7 @@ trait RecreateTrait
      *
      * @return bool
      */
-    private function recreateTable(TableEntity $tableAttrs, string $table = '')
+    /*private function recreateTable(TableEntity $tableAttrs, string $table = '')
     {
         $alter = [];
         $originals = [];
@@ -131,5 +131,5 @@ trait RecreateTrait
             $this->driver->execute('COMMIT');
         }
         return true;
-    }
+    }*/
 }

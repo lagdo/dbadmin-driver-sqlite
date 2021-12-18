@@ -12,8 +12,6 @@ use function array_reverse;
 
 class Database extends AbstractDatabase
 {
-    use RecreateTrait;
-
     /**
      * @param string $table
      * @param int $autoIncrement
@@ -99,7 +97,13 @@ class Database extends AbstractDatabase
      */
     public function createTable(TableEntity $tableAttrs)
     {
-        if (!$this->recreateTable($tableAttrs)) {
+        foreach ($tableAttrs->fields as $key => $field) {
+            $tableAttrs->fields[$key] = '  ' . implode($field);
+        }
+        $tableAttrs->fields = array_merge($tableAttrs->fields, array_filter($tableAttrs->foreign));
+        if (!$this->driver->execute('CREATE TABLE ' . $this->driver->table($tableAttrs->name) .
+            " (\n" . implode(",\n", $tableAttrs->fields) . "\n)")) {
+            // implicit ROLLBACK to not overwrite $this->driver->error()
             return false;
         }
         $this->setAutoIncrement($tableAttrs->name, $tableAttrs->autoIncrement);
