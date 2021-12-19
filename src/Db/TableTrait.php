@@ -2,20 +2,15 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
-use Lagdo\DbAdmin\Driver\Db\ConnectionInterface;
-use Lagdo\DbAdmin\Driver\Entity\IndexEntity;
 use Lagdo\DbAdmin\Driver\Entity\TableEntity;
+use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
+
+use function strtoupper;
+use function preg_match;
+use function implode;
 
 trait TableTrait
 {
-    /**
-     * @inheritDoc
-     */
-    public function isView(TableEntity $tableStatus)
-    {
-        return $tableStatus->engine == 'view';
-    }
-
     /**
      * @param string $table
      *
@@ -85,54 +80,50 @@ trait TableTrait
     }
 
     /**
-     * @param string $table
-     * @param ConnectionInterface $connection
-     *
-     * @return IndexEntity|null
+     * @inheritDoc
      */
-    private function queryPrimaryIndex(string $table, ConnectionInterface $connection)
+    public function triggerOptions()
     {
-        $primaryIndex = null;
-        $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->driver->quote($table);
-        $result = $connection->result($query);
-        if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
-            $primaryIndex = new IndexEntity();
-            $primaryIndex->type = "PRIMARY";
-            preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i',
-                $match[1], $matches, PREG_SET_ORDER);
-            foreach ($matches as $match) {
-                $primaryIndex->columns[] = $this->driver->unescapeId($match[2]) . $match[4];
-                $primaryIndex->descs[] = (preg_match('~DESC~i', $match[5]) ? '1' : null);
-            }
-        }
-        return $primaryIndex;
+        return [
+            "Timing" => ["BEFORE", "AFTER", "INSTEAD OF"],
+            "Event" => ["INSERT", "UPDATE", "UPDATE OF", "DELETE"],
+            "Type" => ["FOR EACH ROW"],
+        ];
     }
 
     /**
-     * @param string $table
-     * @param ConnectionInterface $connection
-     *
-     * @return IndexEntity
+     * @inheritDoc
      */
-    private function makePrimaryIndex(string $table, ConnectionInterface $connection)
+    public function trigger(string $name, string $table = '')
     {
-        $primaryIndex = $this->queryPrimaryIndex($table, $connection);
-        if ($primaryIndex !== null) {
-            return $primaryIndex;
+        if ($name == "") {
+            return new TriggerEntity('', '', "BEGIN\n\t;\nEND");
         }
-        foreach ($this->fields($table) as $name => $field) {
-            if (!$field->primary) {
-                continue;
-            }
-            if ($primaryIndex === null) {
-                $primaryIndex = new IndexEntity();
-            }
-            $primaryIndex->type = "PRIMARY";
-            $primaryIndex->columns = [$name];
-            $primaryIndex->lengths = [];
-            $primaryIndex->descs = [null];
+        $idf = '(?:[^`"\s]+|`[^`]*`|"[^"]*")+';
+        $options = $this->triggerOptions();
+        preg_match("~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $options["Timing"]) .
+            ")\\s+([a-z]+)(?:\\s+OF\\s+($idf))?\\s+ON\\s*$idf\\s*(?:FOR\\s+EACH\\s+ROW\\s)?(.*)~is",
+            $this->connection->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
+                $this->driver->quote($name)), $match);
+        $of = $match[3];
+        return new TriggerEntity(strtoupper($match[1]), strtoupper($match[2]), $match[4],
+            ($of[0] == '`' || $of[0] == '"' ? $this->driver->unescapeId($of) : $of), $name);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function triggers(string $table)
+    {
+        $triggers = [];
+        $options = $this->triggerOptions();
+        $query = "SELECT * FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->driver->quote($table);
+        foreach ($this->driver->rows($query) as $row) {
+            preg_match('~^CREATE\s+TRIGGER\s*(?:[^`"\s]+|`[^`]*`|"[^"]*")+\s*(' .
+                implode("|", $options["Timing"]) . ')\s*(.*?)\s+ON\b~i', $row["sql"], $match);
+            $triggers[$row["name"]] = new TriggerEntity($match[1], $match[2], '', '', $row["name"]);
         }
-        return $primaryIndex;
+        return $triggers;
     }
 
     /**
