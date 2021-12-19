@@ -8,6 +8,11 @@ use Lagdo\DbAdmin\Driver\Sqlite\Db\ConfigTrait;
 use SQLite3;
 
 use function preg_match;
+use function is_array;
+use function is_object;
+use function count;
+use function unpack;
+use function reset;
 
 class Connection extends AbstractConnection
 {
@@ -40,7 +45,7 @@ class Connection extends AbstractConnection
     public function query(string $query, bool $unbuffered = false)
     {
         $space = $this->spaceRegex();
-        if (\preg_match("~^$space*+ATTACH\\b~i", $query, $match)) {
+        if (preg_match("~^$space*+ATTACH\\b~i", $query, $match)) {
             // PHP doesn't support setting SQLITE_LIMIT_ATTACHED
             $this->driver->setError($this->trans->lang('ATTACH queries are not supported.'));
             return false;
@@ -64,14 +69,15 @@ class Connection extends AbstractConnection
      */
     public function quote(string $string)
     {
-        return ($this->util->isUtf8($string) ?
-            "'" . $this->client->escapeString($string) . "'" :
-            "x'" . reset(unpack('H*', $string)) . "'");
+        if ($this->util->isUtf8($string) || !is_array($unpacked = unpack('H*', $string))) {
+            return "'" . $this->client->escapeString($string) . "'";
+        }
+        return "x'" . reset($unpacked) . "'";
     }
 
     public function multiQuery(string $query)
     {
-        $this->statement = $this->query($query);
+        $this->statement = $this->driver->execute($query);
         return $this->statement !== false;
     }
 
@@ -96,7 +102,7 @@ class Connection extends AbstractConnection
         if ($field < 0) {
             $field = $this->defaultField();
         }
-        $result = $this->query($query);
+        $result = $this->driver->execute($query);
         if (!is_object($result)) {
             return null;
         }
