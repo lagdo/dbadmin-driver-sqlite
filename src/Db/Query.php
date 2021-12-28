@@ -14,7 +14,7 @@ class Query extends AbstractQuery
     protected function limitToOne(string $table, string $query, string $where, string $separator = "\n")
     {
         return preg_match('~^INTO~', $query) ||
-            $this->connection->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
+            $this->driver->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
             $this->driver->limit($query, $where, 1, 0) :
             //! use primary key in tables with WITHOUT rowid
             " $query WHERE rowid = (SELECT rowid FROM " . $this->driver->table($table) . $where . ' LIMIT 1)';
@@ -52,7 +52,7 @@ class Query extends AbstractQuery
             'type' => 'VIEW',
             'materialized' => false,
             'select' => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
-                $this->connection->result("SELECT sql FROM sqlite_master WHERE name = " .
+                $this->driver->result("SELECT sql FROM sqlite_master WHERE name = " .
                 $this->driver->quote($name)))
         ]; //! identifiers may be inside []
     }
@@ -62,7 +62,7 @@ class Query extends AbstractQuery
      */
     public function lastAutoIncrementId()
     {
-        return $this->connection->result("SELECT LAST_INSERT_ROWID()");
+        return $this->driver->result("SELECT LAST_INSERT_ROWID()");
     }
 
     /**

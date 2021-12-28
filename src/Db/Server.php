@@ -19,6 +19,16 @@ class Server extends AbstractServer
     protected $extensions = "db|sdb|sqlite";
 
     /**
+     * @var array
+     */
+    protected $variableNames = ["auto_vacuum", "cache_size", "count_changes", "default_cache_size",
+        "empty_result_callbacks", "encoding", "foreign_keys", "full_column_names", "fullfsync",
+        "journal_mode", "journal_size_limit", "legacy_file_format", "locking_mode", "page_size",
+        "max_page_count", "read_uncommitted", "recursive_triggers", "reverse_unordered_selects",
+        "secure_delete", "short_column_names", "synchronous", "temp_store", "temp_store_directory",
+        "schema_version", "integrity_check", "quick_check"];
+
+    /**
      * @inheritDoc
      */
     public function databases(bool $flush)
@@ -65,7 +75,7 @@ class Server extends AbstractServer
     public function databaseCollation(string $database, array $collations)
     {
         // there is no database list so $database == $this->driver->database()
-        return $this->connection->result("PRAGMA encoding");
+        return $this->driver->result("PRAGMA encoding");
     }
 
     /**
@@ -157,8 +167,8 @@ class Server extends AbstractServer
     public function variables()
     {
         $variables = [];
-        foreach (["auto_vacuum", "cache_size", "count_changes", "default_cache_size", "empty_result_callbacks", "encoding", "foreign_keys", "full_column_names", "fullfsync", "journal_mode", "journal_size_limit", "legacy_file_format", "locking_mode", "page_size", "max_page_count", "read_uncommitted", "recursive_triggers", "reverse_unordered_selects", "secure_delete", "short_column_names", "synchronous", "temp_store", "temp_store_directory", "schema_version", "integrity_check", "quick_check"] as $key) {
-            $variables[$key] = $this->connection->result("PRAGMA $key");
+        foreach ($this->variableNames as $key) {
+            $variables[$key] = $this->driver->result("PRAGMA $key");
         }
         return $variables;
     }

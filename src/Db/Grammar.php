@@ -27,7 +27,7 @@ class Grammar extends AbstractGrammar
      */
     public function sqlForCreateTable(string $table, bool $autoIncrement, string $style)
     {
-        $query = $this->connection->result("SELECT sql FROM sqlite_master " .
+        $query = $this->driver->result("SELECT sql FROM sqlite_master " .
             "WHERE type IN ('table', 'view') AND name = " . $this->driver->quote($table));
         foreach ($this->driver->indexes($table) as $name => $index) {
             if ($name == '') {

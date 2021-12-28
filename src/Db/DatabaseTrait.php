@@ -110,7 +110,7 @@ trait DatabaseTrait
                     implode(' ', $timing_event) . ' ON ' . $this->driver->table($tableAttrs->name) . "\n$trigger[Statement]";
             }
             $autoIncrement = $tableAttrs->autoIncrement ? 0 :
-                $this->connection->result('SELECT seq FROM sqlite_sequence WHERE name = ' .
+                $this->driver->result('SELECT seq FROM sqlite_sequence WHERE name = ' .
                     $this->driver->quote($table)); // if $autoIncrement is set then it will be updated later
             // Drop before creating indexes and triggers to allow using old names
             if (!$this->driver->execute('DROP TABLE ' . $this->driver->table($table)) ||

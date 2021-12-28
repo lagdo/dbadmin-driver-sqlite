@@ -36,7 +36,7 @@ trait TableTrait
         $status->oid = $row['Oid'];
         // $status->Auto_increment = $row['Auto_increment'];
         $query = 'SELECT COUNT(*) FROM ' . $this->driver->escapeId($row['Name']);
-        $status->rows = $this->connection->result($query);
+        $status->rows = $this->driver->result($query);
 
         return $status;
     }
@@ -103,7 +103,7 @@ trait TableTrait
         $options = $this->triggerOptions();
         preg_match("~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $options["Timing"]) .
             ")\\s+([a-z]+)(?:\\s+OF\\s+($idf))?\\s+ON\\s*$idf\\s*(?:FOR\\s+EACH\\s+ROW\\s)?(.*)~is",
-            $this->connection->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
+            $this->driver->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
                 $this->driver->quote($name)), $match);
         $of = $match[3];
         return new TriggerEntity(strtoupper($match[1]), strtoupper($match[2]), $match[4],

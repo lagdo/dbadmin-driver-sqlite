@@ -34,7 +34,7 @@ class Table extends AbstractTable
      */
     public function supportForeignKeys(TableEntity $tableStatus)
     {
-        return !$this->connection->result("SELECT sqlite_compileoption_used('OMIT_FOREIGN_KEY')");
+        return !$this->driver->result("SELECT sqlite_compileoption_used('OMIT_FOREIGN_KEY')");
     }
 
     /**
@@ -125,7 +125,7 @@ class Table extends AbstractTable
     {
         $fields = $this->tableFields($table);
         $query = "SELECT sql FROM sqlite_master WHERE type IN ('table', 'view') AND name = " . $this->driver->quote($table);
-        $result = $this->connection->result($query);
+        $result = $this->driver->result($query);
         $pattern = '~(("[^"]*+")+|[a-z0-9_]+)\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i';
         preg_match_all($pattern, $result, $matches, PREG_SET_ORDER);
         foreach ($matches as $match) {
@@ -141,11 +141,10 @@ class Table extends AbstractTable
      * @param array $row
      * @param array $results
      * @param string $table
-     * @param ConnectionInterface $connection
      *
      * @return IndexEntity
      */
-    private function makeIndexEntity(array $row, array $results, string $table, ConnectionInterface $connection)
+    private function makeIndexEntity(array $row, array $results, string $table)
     {
         $index = new IndexEntity();
 
@@ -153,8 +152,7 @@ class Table extends AbstractTable
         $index->type = $row["unique"] ? "UNIQUE" : "INDEX";
         $index->lengths = [];
         $index->descs = [];
-        $columns = $this->driver->rows("PRAGMA index_info(" .
-            $this->driver->escapeId($name) . ")", $connection);
+        $columns = $this->driver->rows("PRAGMA index_info(" . $this->driver->escapeId($name) . ")");
         foreach ($columns as $column) {
             $index->columns[] = $column["name"];
             $index->descs[] = null;
@@ -173,15 +171,14 @@ class Table extends AbstractTable
 
     /**
      * @param string $table
-     * @param ConnectionInterface $connection
      *
      * @return IndexEntity|null
      */
-    private function queryPrimaryIndex(string $table, ConnectionInterface $connection)
+    private function queryPrimaryIndex(string $table)
     {
         $primaryIndex = null;
         $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->driver->quote($table);
-        $result = $connection->result($query);
+        $result = $this->driver->result($query);
         if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
             $primaryIndex = new IndexEntity();
             $primaryIndex->type = "PRIMARY";
@@ -197,13 +194,12 @@ class Table extends AbstractTable
 
     /**
      * @param string $table
-     * @param ConnectionInterface $connection
      *
      * @return IndexEntity
      */
-    private function makePrimaryIndex(string $table, ConnectionInterface $connection)
+    private function makePrimaryIndex(string $table)
     {
-        $primaryIndex = $this->queryPrimaryIndex($table, $connection);
+        $primaryIndex = $this->queryPrimaryIndex($table);
         if ($primaryIndex !== null) {
             return $primaryIndex;
         }
@@ -225,22 +221,19 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function indexes(string $table, ConnectionInterface $connection = null)
+    public function indexes(string $table)
     {
-        if (!$connection) {
-            $connection = $this->connection;
-        }
-        $primaryIndex = $this->makePrimaryIndex($table, $connection);
+        $primaryIndex = $this->makePrimaryIndex($table);
         if ($primaryIndex === null) {
             return [];
         }
 
         $indexes = ['' => $primaryIndex];
         $query = "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = " . $this->driver->quote($table);
-        $results = $this->driver->keyValues($query, $connection);
-        $rows = $this->driver->rows("PRAGMA index_list(" . $this->driver->table($table) . ")", $connection);
+        $results = $this->driver->keyValues($query);
+        $rows = $this->driver->rows("PRAGMA index_list(" . $this->driver->table($table) . ")");
         foreach ($rows as $row) {
-            $index = $this->makeIndexEntity($row, $results, $table, $connection);
+            $index = $this->makeIndexEntity($row, $results, $table);
             $name = $row["name"];
             if ($index->type === 'UNIQUE' && $index->columns == $primaryIndex->columns &&
                 $index->descs == $primaryIndex->descs && preg_match("~^sqlite_~", $name)) {
