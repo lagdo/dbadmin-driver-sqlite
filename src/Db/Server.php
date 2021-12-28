@@ -3,9 +3,21 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
 use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
+use Lagdo\DbAdmin\Driver\Db\StatementInterface;
 
 use DirectoryIterator;
 use Exception;
+
+use function is_a;
+use function count;
+use function rtrim;
+use function intval;
+use function preg_match;
+use function file_exists;
+use function str_replace;
+use function unlink;
+use function explode;
+use function rename;
 
 class Server extends AbstractServer
 {
@@ -58,12 +70,12 @@ class Server extends AbstractServer
         $connection->open($database);
         $pageSize = 0;
         $statement = $connection->query('pragma page_size');
-        if (is_object($statement) && ($row = $statement->fetchRow())) {
+        if (is_a($statement, StatementInterface::class) && ($row = $statement->fetchRow())) {
             $pageSize = intval($row[0]);
         }
         $pageCount = 0;
         $statement = $connection->query('pragma page_count');
-        if (is_object($statement) && ($row = $statement->fetchRow())) {
+        if (is_a($statement, StatementInterface::class) && ($row = $statement->fetchRow())) {
             $pageCount = intval($row[0]);
         }
         return $pageSize * $pageCount;

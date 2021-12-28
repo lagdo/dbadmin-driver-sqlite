@@ -12,12 +12,12 @@ trait ConfigTrait
      *
      * @return string
      */
-    private function filename($database, $options)
+    private function filename(string $database, array $options)
     {
         // By default, connect to the in memory database.
-        if (!$database) {
+        if (!$database || !file_exists(($filename = rtrim($options['directory'], '/\\') . "/$database"))) {
             return ':memory:';
         }
-        return rtrim($options['directory'], '/\\') . "/$database";
+        return $filename;
     }
 }

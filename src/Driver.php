@@ -3,8 +3,11 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Exception\AuthException;
-
 use Lagdo\DbAdmin\Driver\Driver as AbstractDriver;
+
+use function in_array;
+use function class_exists;
+use function extension_loaded;
 
 class Driver extends AbstractDriver
 {
