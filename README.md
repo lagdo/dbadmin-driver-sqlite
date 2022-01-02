@@ -1,5 +1,7 @@
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/lagdo/dbadmin-driver-sqlite/badges/quality-score.png?b=main)](https://scrutinizer-ci.com/g/lagdo/dbadmin-driver-sqlite/?branch=main)
 [![StyleCI](https://styleci.io/repos/400403244/shield?branch=main)](https://styleci.io/repos/400403244)
+[![Build Status](https://api.travis-ci.com/lagdo/dbadmin-driver-sqlite.svg?branch=main)](https://app.travis-ci.com/github/lagdo/dbadmin-driver-sqlite)
+[![Coverage Status](https://coveralls.io/repos/github/lagdo/dbadmin-driver-sqlite/badge.svg?branch=main)](https://coveralls.io/github/lagdo/dbadmin-driver-sqlite?branch=main)
 
 [![Latest Stable Version](https://poser.pugx.org/lagdo/dbadmin-driver-sqlite/v/stable)](https://packagist.org/packages/lagdo/dbadmin-driver-sqlite)
 [![Total Downloads](https://poser.pugx.org/lagdo/dbadmin-driver-sqlite/downloads)](https://packagist.org/packages/lagdo/dbadmin-driver-sqlite)
