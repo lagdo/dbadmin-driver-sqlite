@@ -106,7 +106,9 @@ class Database extends AbstractDatabase
             $queries[] = 'ALTER TABLE ' . $this->driver->table($table) . ' RENAME TO ' .
                 $this->driver->table($tableAttrs->name);
         }
-        $this->executeQueries($queries);
+        if (!$this->executeQueries($queries)) {
+            return false;
+        }
         $this->setAutoIncrement($tableAttrs->name, $tableAttrs->autoIncrement);
         return true;
     }
@@ -127,10 +129,6 @@ class Database extends AbstractDatabase
                     $index->name, '(' . implode(', ', $index->columns) . ')');
             }
         }
-        // TODO: Wrap queries into a transaction
-        foreach ($queries as $query) {
-            $this->driver->execute($query);
-        }
-        return true;
+        return $this->executeQueries($queries);
     }
 }
