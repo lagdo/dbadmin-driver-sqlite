@@ -6,6 +6,58 @@ use Lagdo\DbAdmin\Driver\Entity\TableEntity;
 
 trait DatabaseTrait
 {
+    private function executeQueries(array $queries): bool
+    {
+        if (!$queries) {
+            return false;
+        }
+        $this->driver->execute('BEGIN');
+        foreach ($queries as $query) {
+            if (!$this->driver->execute($query)) {
+                $this->driver->execute('ROLLBACK');
+                return false;
+            }
+        }
+        $this->driver->execute('COMMIT');
+        return true;
+    }
+
+    /**
+     * @param string $table
+     * @param int $autoIncrement
+     *
+     * @return void
+     */
+    private function setAutoIncrement(string $table, int $autoIncrement)
+    {
+        if ($autoIncrement) {
+            $this->driver->execute('BEGIN');
+            $this->driver->execute("UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = " .
+                $this->driver->quote($table)); // ignores error
+            if (!$this->driver->affectedRows()) {
+                $this->driver->execute('INSERT INTO sqlite_sequence (name, seq) VALUES (' .
+                    $this->driver->quote($table) . ", $autoIncrement)");
+            }
+            $this->driver->execute('COMMIT');
+        }
+    }
+
+    /**
+     * @param TableEntity $tableAttrs
+     *
+     * @return array
+     */
+    private function getAlterTableClauses(TableEntity $tableAttrs): array
+    {
+        $clauses = [];
+        foreach ($tableAttrs->fields as $field) {
+            if ($field[1]) {
+                $clauses[] = ($field[0] != ''  ? $field[1] : 'ADD ' . implode($field[1]));
+            }
+        }
+        return $clauses;
+    }
+
     /**
      * Recreate a table
      *

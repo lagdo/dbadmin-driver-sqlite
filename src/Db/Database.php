@@ -12,25 +12,7 @@ use function array_reverse;
 
 class Database extends AbstractDatabase
 {
-    /**
-     * @param string $table
-     * @param int $autoIncrement
-     *
-     * @return void
-     */
-    private function setAutoIncrement(string $table, int $autoIncrement)
-    {
-        if ($autoIncrement) {
-            $this->driver->execute('BEGIN');
-            $this->driver->execute("UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = " .
-                $this->driver->quote($table)); // ignores error
-            if (!$this->driver->affectedRows()) {
-                $this->driver->execute('INSERT INTO sqlite_sequence (name, seq) VALUES (' .
-                    $this->driver->quote($table) . ", $autoIncrement)");
-            }
-            $this->driver->execute('COMMIT');
-        }
-    }
+    use DatabaseTrait;
 
     /**
      * @inheritDoc
@@ -115,12 +97,7 @@ class Database extends AbstractDatabase
      */
     public function alterTable(string $table, TableEntity $tableAttrs)
     {
-        $clauses = [];
-        foreach ($tableAttrs->fields as $field) {
-            if ($field[1]) {
-                $clauses[] = ($field[0] != ''  ? $field[1] : 'ADD ' . implode($field[1]));
-            }
-        }
+        $clauses = $this->getAlterTableClauses($tableAttrs);
         $queries = [];
         foreach ($clauses as $clause) {
             $queries[] = 'ALTER TABLE ' . $this->driver->table($table) . ' ' . $clause;
@@ -129,12 +106,7 @@ class Database extends AbstractDatabase
             $queries[] = 'ALTER TABLE ' . $this->driver->table($table) . ' RENAME TO ' .
                 $this->driver->table($tableAttrs->name);
         }
-        // TODO: Wrap queries into a transaction
-        foreach ($queries as $query) {
-            if (!$this->driver->execute($query)) {
-                return false;
-            }
-        }
+        $this->executeQueries($queries);
         $this->setAutoIncrement($tableAttrs->name, $tableAttrs->autoIncrement);
         return true;
     }
