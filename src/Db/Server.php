@@ -144,15 +144,12 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function dropDatabases(array $databases)
+    public function dropDatabase(string $database)
     {
-        $options = $this->driver->options();
-        foreach ($databases as $database) {
-            $filename = $this->filename($database, $options);
-            if (!@unlink($filename)) {
-                $this->driver->setError($this->trans->lang('File exists.'));
-                return false;
-            }
+        $filename = $this->filename($database, $this->driver->options());
+        if (!@unlink($filename)) {
+            $this->driver->setError($this->trans->lang('File exists.'));
+            return false;
         }
         return true;
     }
