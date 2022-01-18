@@ -23,6 +23,11 @@ class ServerContext implements Context
     protected $dbSize;
 
     /**
+     * @var bool
+     */
+    protected $dbResult;
+
+    /**
      * The constructor
      */
     public function __construct()
@@ -95,7 +100,7 @@ class ServerContext implements Context
      */
     public function createDatabase(string $database)
     {
-        $this->driver->createDatabase($database, '');
+        $this->dbResult = $this->driver->createDatabase($database, '');
     }
 
     /**
@@ -111,7 +116,7 @@ class ServerContext implements Context
      */
     public function renameDatabase(string $database)
     {
-        $this->driver->renameDatabase($database, '');
+        $this->dbResult = $this->driver->renameDatabase($database, '');
     }
 
     /**
@@ -119,6 +124,22 @@ class ServerContext implements Context
      */
     public function deleteDatabase(string $database)
     {
-        $this->driver->dropDatabase($database);
+        $this->dbResult = $this->driver->dropDatabase($database);
+    }
+
+    /**
+     * @Then The operation has succeeded
+     */
+    public function checkThatTheOperationHasSucceeded()
+    {
+        Assert::assertTrue($this->dbResult);
+    }
+
+    /**
+     * @Then The operation has failed
+     */
+    public function checkThatTheOperationHasFailed()
+    {
+        Assert::assertFalse($this->dbResult);
     }
 }
