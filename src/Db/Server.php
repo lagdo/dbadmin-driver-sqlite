@@ -46,7 +46,7 @@ class Server extends AbstractServer
     public function databases(bool $flush)
     {
         $databases = [];
-        $directory = rtrim($this->driver->options('directory'), '/\\');
+        $directory = $this->directory($this->driver->options());
         $iterator = new DirectoryIterator($directory);
         // Iterate on dir content
         foreach($iterator as $file)
@@ -67,7 +67,9 @@ class Server extends AbstractServer
     public function databaseSize(string $database)
     {
         $connection = $this->driver->createConnection(); // New connection
-        $connection->open($database);
+        if (!$connection->open($database)) {
+            return 0;
+        }
         $pageSize = 0;
         $statement = $connection->query('pragma page_size');
         if (is_a($statement, StatementInterface::class) && ($row = $statement->fetchRow())) {
@@ -130,14 +132,14 @@ class Server extends AbstractServer
         }
         try {
             $connection = $this->driver->createConnection(); // New connection
-            $connection->open($database);
+            $connection->open($database, '__create__');
+            $connection->query('PRAGMA encoding = "UTF-8"');
+            $connection->query('CREATE TABLE adminer (i)'); // otherwise creates empty file
+            $connection->query('DROP TABLE adminer');
         } catch (Exception $ex) {
             $this->driver->setError($ex->getMessage());
             return false;
         }
-        $connection->query('PRAGMA encoding = "UTF-8"');
-        $connection->query('CREATE TABLE adminer (i)'); // otherwise creates empty file
-        $connection->query('DROP TABLE adminer');
         return true;
     }
 
@@ -166,7 +168,6 @@ class Server extends AbstractServer
                 str_replace("|", ", ", $this->extensions)));
             return false;
         }
-        $this->driver->setError($this->trans->lang('File exists.'));
         return @rename($this->filename($this->driver->database(), $options), $filename);
     }
 

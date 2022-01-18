@@ -5,6 +5,7 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Sqlite;
 use Lagdo\DbAdmin\Driver\Db\Connection as AbstractConnection;
 use Lagdo\DbAdmin\Driver\Sqlite\Db\ConfigTrait;
 
+use Exception;
 use SQLite3;
 
 use function preg_match;
@@ -25,7 +26,13 @@ class Connection extends AbstractConnection
     {
         $options = $this->driver->options();
         $filename = $this->filename($database, $options);
-        $this->client = new SQLite3($filename);
+        $flags = $schema === '__create__' ? SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE : SQLITE3_OPEN_READWRITE;
+        try {
+            $this->client = new SQLite3($filename, $flags);
+        } catch (Exception $ex) {
+            $this->driver->setError($ex->getMessage());
+            return false;
+        }
         $this->query("PRAGMA foreign_keys = 1");
         return true;
     }

@@ -36,6 +36,7 @@ class ServerContext implements Context
     public function connectToTheDefaultServer()
     {
         // Nothing to do
+        $this->driver->createConnection();
     }
 
     /**
@@ -52,16 +53,17 @@ class ServerContext implements Context
      */
     public function checkTheNumberOfDatabases(int $count)
     {
+        Assert::assertEquals('', $this->driver->error());
         Assert::assertEquals($count, count($this->databases));
     }
 
     /**
-     * @Then No database query is executed
+     * @Then :count database query is executed
+     * @Then :count database queries are executed
      */
-    public function checkThatNoDatabaseQueryIsExecuted()
+    public function checkTheNumberOfDatabaseQueries(int $count)
     {
-        $queries = $this->driver->queries();
-        Assert::assertEquals(0, count($queries));
+        Assert::assertEquals($count, count($this->driver->queries()));
     }
 
     /**
@@ -77,9 +79,7 @@ class ServerContext implements Context
      */
     public function getTheDatabaseSize(string $database)
     {
-        $this->driver->realConnection = true;
         $this->dbSize = $this->driver->databaseSize($database);
-        $this->driver->realConnection = false;
     }
 
     /**
@@ -88,5 +88,37 @@ class ServerContext implements Context
     public function checkTheDatabaseSize(int $size)
     {
         Assert::assertEquals($size, $this->dbSize);
+    }
+
+    /**
+     * @When I create the database :database
+     */
+    public function createDatabase(string $database)
+    {
+        $this->driver->createDatabase($database, '');
+    }
+
+    /**
+     * @When I open the database :database
+     */
+    public function openDatabase(string $database)
+    {
+        $this->driver->connect($database, '');
+    }
+
+    /**
+     * @When I rename the database to :database
+     */
+    public function renameDatabase(string $database)
+    {
+        $this->driver->renameDatabase($database, '');
+    }
+
+    /**
+     * @When I delete the database :database
+     */
+    public function deleteDatabase(string $database)
+    {
+        $this->driver->dropDatabase($database);
     }
 }

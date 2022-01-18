@@ -2,8 +2,24 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
+use function rtrim;
+use function str_replace;
+use function file_exists;
+
 trait ConfigTrait
 {
+    /**
+     * Get the full path to the database directory
+     *
+     * @param array $options
+     *
+     * @return string
+     */
+    private function directory(array $options): string
+    {
+        return rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $options['directory']), '/\\');
+    }
+
     /**
      * Get the full path to the database file
      *
@@ -12,12 +28,25 @@ trait ConfigTrait
      *
      * @return string
      */
-    private function filename(string $database, array $options)
+    private function filename(string $database, array $options): string
     {
-        // By default, connect to the in memory database.
-        if (!$database || !file_exists(($filename = rtrim($options['directory'], '/\\') . "/$database"))) {
+        if (!$database) {
+            // By default, connect to the in memory database.
             return ':memory:';
         }
-        return $filename;
+        return $this->directory($options) . DIRECTORY_SEPARATOR . $database;
+    }
+
+    /**
+     * Check if a database file exists
+     *
+     * @param string $database
+     * @param array $options
+     *
+     * @return bool
+     */
+    private function fileExists(string $database, array $options): bool
+    {
+        return ($database) && file_exists($this->directory($options) . DIRECTORY_SEPARATOR . $database);
     }
 }
