@@ -12,7 +12,7 @@ DbAdmin drivers for SQLite
 
 This package is based on [Adminer](https://github.com/vrana/adminer).
 
-It provides SQLite drivers for [Jaxon Adminer](https://github.com/lagdo/jaxon-dbadmin), and implements the interfaces defined in [https://github.com/lagdo/dbadmin-driver](https://github.com/lagdo/dbadmin-driver).
+It provides SQLite drivers for [Jaxon DbAdmin](https://github.com/lagdo/jaxon-dbadmin), and implements the interfaces defined in [https://github.com/lagdo/dbadmin-driver](https://github.com/lagdo/dbadmin-driver).
 
 It requires either the `php-sqlite3` or the `pdo_sqlite` PHP extension to be installed, and uses the former by default.
 
@@ -45,4 +45,4 @@ Databases are files with extension `db`, `sdb` or `sqlite`.
     ],
 ```
 
-Check the [Jaxon Adminer](https://github.com/lagdo/jaxon-dbadmin) documentation for more information about the package usage.
+Check the [Jaxon DbAdmin](https://github.com/lagdo/jaxon-dbadmin) documentation for more information about the package usage.

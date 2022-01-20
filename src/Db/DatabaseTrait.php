@@ -139,7 +139,7 @@ trait DatabaseTrait
             $tableAttrs->fields[$key] = '  ' . implode($field);
         }
         $tableAttrs->fields = array_merge($tableAttrs->fields, array_filter($tableAttrs->foreign));
-        $tempName = ($table == $tableAttrs->name ? "adminer_{$tableAttrs->name}" : $tableAttrs->name);
+        $tempName = ($table == $tableAttrs->name ? "dbadmin_{$tableAttrs->name}" : $tableAttrs->name);
         if (!$this->driver->execute('CREATE TABLE ' . $this->driver->table($tempName) .
             " (\n" . implode(",\n", $tableAttrs->fields) . "\n)")) {
             // implicit ROLLBACK to not overwrite $this->driver->error()
