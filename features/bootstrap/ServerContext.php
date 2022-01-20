@@ -23,7 +23,7 @@ class ServerContext implements Context
     protected $dbSize;
 
     /**
-     * @var bool
+     * @var mixed
      */
     protected $dbResult;
 
@@ -40,8 +40,15 @@ class ServerContext implements Context
      */
     public function connectToTheDefaultServer()
     {
-        // Nothing to do
         $this->driver->createConnection();
+    }
+
+    /**
+     * @Given The database :database is connected
+     */
+    public function connectToTheDatabase(string $database)
+    {
+        $this->driver->connect($database, '');
     }
 
     /**
@@ -72,6 +79,51 @@ class ServerContext implements Context
     }
 
     /**
+     * @Then The size of the database is :size
+     */
+    public function checkTheDatabaseSize(int $size)
+    {
+        Assert::assertEquals($size, $this->dbSize);
+    }
+
+    /**
+     * @Then The operation has succeeded
+     * @Then The result is true
+     */
+    public function checkThatTheOperationHasSucceeded()
+    {
+        Assert::assertTrue($this->dbResult === true);
+    }
+
+    /**
+     * @Then The operation has failed
+     * @Then The result is false
+     */
+    public function checkThatTheOperationHasFailed()
+    {
+        Assert::assertTrue($this->dbResult === false);
+    }
+
+    /**
+     * @Then The result is an array with :count item
+     * @Then The result is an array with :count items
+     */
+    public function checkThatTheResultIsAnArrayWithCount(int $count)
+    {
+        Assert::assertTrue(is_array($this->dbResult));
+        Assert::assertTrue(count($this->dbResult) === $count);
+    }
+
+    /**
+     * @Then The result is the string :value
+     */
+    public function checkThatTheResultIsAStringWithValue(string $value)
+    {
+        Assert::assertTrue(is_string($this->dbResult));
+        Assert::assertEquals($value, $this->dbResult);
+    }
+
+    /**
      * @Given The next request returns :status
      */
     public function setTheNextDatabaseRequestStatus(bool $status)
@@ -85,14 +137,6 @@ class ServerContext implements Context
     public function getTheDatabaseSize(string $database)
     {
         $this->dbSize = $this->driver->databaseSize($database);
-    }
-
-    /**
-     * @Then The size of the database is :size
-     */
-    public function checkTheDatabaseSize(int $size)
-    {
-        Assert::assertEquals($size, $this->dbSize);
     }
 
     /**
@@ -128,18 +172,10 @@ class ServerContext implements Context
     }
 
     /**
-     * @Then The operation has succeeded
+     * @When I get the collation of the database
      */
-    public function checkThatTheOperationHasSucceeded()
+    public function getTheCurrentDatabaseCollation()
     {
-        Assert::assertTrue($this->dbResult);
-    }
-
-    /**
-     * @Then The operation has failed
-     */
-    public function checkThatTheOperationHasFailed()
-    {
-        Assert::assertFalse($this->dbResult);
+        $this->dbResult = $this->driver->databaseCollation('', []);
     }
 }

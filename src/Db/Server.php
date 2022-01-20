@@ -120,11 +120,11 @@ class Server extends AbstractServer
     public function createDatabase(string $database, string $collation)
     {
         $options = $this->driver->options();
-        $filename = $this->filename($database, $options);
-        if (file_exists($filename)) {
+        if ($this->fileExists($database, $options)) {
             $this->driver->setError($this->trans->lang('File exists.'));
             return false;
         }
+        $filename = $this->filename($database, $options);
         if (!$this->validateName($filename)) {
             $this->driver->setError($this->trans->lang('Please use one of the extensions %s.',
                 str_replace("|", ", ", $this->extensions)));
@@ -134,8 +134,8 @@ class Server extends AbstractServer
             $connection = $this->driver->createConnection(); // New connection
             $connection->open($database, '__create__');
             $connection->query('PRAGMA encoding = "UTF-8"');
-            $connection->query('CREATE TABLE adminer (i)'); // otherwise creates empty file
-            $connection->query('DROP TABLE adminer');
+            $connection->query('CREATE TABLE dbadmin (i)'); // otherwise creates empty file
+            $connection->query('DROP TABLE dbadmin');
         } catch (Exception $ex) {
             $this->driver->setError($ex->getMessage());
             return false;

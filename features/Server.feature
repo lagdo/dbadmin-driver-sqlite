@@ -36,6 +36,12 @@ Feature: Database server
     When I create the database test1
     Then The operation has failed
 
+  Scenario: Get the collation of an existing database
+    Given The default server is connected
+    And The database test.sdb is connected
+    When I get the collation of the database
+    Then The result is the string "UTF-8"
+
   Scenario: Rename a database
     Given The default server is connected
     When I open the database test1.sdb
