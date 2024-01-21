@@ -32,12 +32,12 @@ Databases are files with extension `db`, `sdb` or `sqlite`.
 ```php
     'app' => [
         'packages' => [
-            Lagdo\DbAdmin\Package::class => [
+            Lagdo\DbAdmin\App\Package::class => [
                 'servers' => [
-                    'server_id' => [
+                    'server_id' => [ // A unique identifier for this server
                         'driver' => 'sqlite',
-                        'name' => '',     // The name to be displayed in the dashboard UI.
-                        'directory' => '',// The directory containing the database files.
+                        'name' => '',      // The name to be displayed in the dashboard UI.
+                        'directory' => '', // The directory containing the database files.
                     ],
                 ],
             ],
