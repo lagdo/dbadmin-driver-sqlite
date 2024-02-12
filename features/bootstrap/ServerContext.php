@@ -28,19 +28,11 @@ class ServerContext implements Context
     protected $dbResult;
 
     /**
-     * The constructor
-     */
-    public function __construct()
-    {
-        $this->driver = new Driver();
-    }
-
-    /**
      * @Given The default server is connected
      */
     public function connectToTheDefaultServer()
     {
-        $this->driver->createConnection();
+        $this->driver = new Driver();
     }
 
     /**
@@ -48,7 +40,7 @@ class ServerContext implements Context
      */
     public function connectToTheDatabase(string $database)
     {
-        $this->driver->connect($database, '');
+        $this->driver->open($database);
     }
 
     /**
@@ -152,7 +144,7 @@ class ServerContext implements Context
      */
     public function openDatabase(string $database)
     {
-        $this->driver->connect($database, '');
+        $this->driver->open($database, '');
     }
 
     /**

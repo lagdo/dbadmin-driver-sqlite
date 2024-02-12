@@ -36,7 +36,7 @@ class Driver extends SqliteDriver
     /*
      * @inheritDoc
      */
-    // public function createConnection()
+    // protected function createConnection()
     // {
     //     if ($this->realConnection) {
     //         return parent::createConnection();

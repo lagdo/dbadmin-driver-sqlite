@@ -4,6 +4,8 @@ namespace Lagdo\DbAdmin\Driver\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Exception\AuthException;
 use Lagdo\DbAdmin\Driver\Driver as AbstractDriver;
+use Lagdo\DbAdmin\Driver\TranslatorInterface;
+use Lagdo\DbAdmin\Driver\UtilInterface;
 
 use function class_exists;
 use function extension_loaded;
@@ -11,9 +13,35 @@ use function extension_loaded;
 class Driver extends AbstractDriver
 {
     /**
+     * The constructor
+     *
+     * @param UtilInterface $util
+     * @param TranslatorInterface $trans
+     * @param array $options
+     */
+    public function __construct(UtilInterface $util, TranslatorInterface $trans, array $options)
+    {
+        parent::__construct($util, $trans, $options);
+
+        $this->server = new Db\Server($this, $this->util, $this->trans);
+        $this->database = new Db\Database($this, $this->util, $this->trans);
+        $this->table = new Db\Table($this, $this->util, $this->trans);
+        $this->query = new Db\Query($this, $this->util, $this->trans);
+        $this->grammar = new Db\Grammar($this, $this->util, $this->trans);
+    }
+
+    /**
      * @inheritDoc
      */
-    protected function initDriver()
+    public function name()
+    {
+        return "SQLite 3";
+    }
+
+    /**
+     * @inheritDoc
+     */
+    protected function initConfig()
     {
         // Init config
         $this->config->jush = 'sqlite';
@@ -37,27 +65,19 @@ class Driver extends AbstractDriver
         ]];
         $this->config->features = ['columns', 'database', 'drop_col', 'dump', 'indexes', 'descidx',
             'move_col', 'sql', 'status', 'table', 'trigger', 'variables', 'view', 'view_trigger'];
-
-        $this->server = new Db\Server($this, $this->util, $this->trans);
-        $this->database = new Db\Database($this, $this->util, $this->trans);
-        $this->table = new Db\Table($this, $this->util, $this->trans);
-        $this->query = new Db\Query($this, $this->util, $this->trans);
-        $this->grammar = new Db\Grammar($this, $this->util, $this->trans);
     }
 
     /**
      * @inheritDoc
      */
-    public function name()
-    {
-        return "SQLite 3";
-    }
+    protected function postConnectConfig()
+    {}
 
     /**
      * @inheritDoc
      * @throws AuthException
      */
-    public function createConnection()
+    protected function createConnection()
     {
         if (!$this->options('prefer_pdo', false) && class_exists("SQLite3")) {
             $connection = new Db\Sqlite\Connection($this, $this->util, $this->trans, 'SQLite3');
