@@ -76,7 +76,7 @@ class Connection extends AbstractConnection
      */
     public function quote(string $string)
     {
-        if ($this->util->isUtf8($string) || !is_array($unpacked = unpack('H*', $string))) {
+        if ($this->admin->isUtf8($string) || !is_array($unpacked = unpack('H*', $string))) {
             return "'" . $this->client->escapeString($string) . "'";
         }
         return "x'" . reset($unpacked) . "'";

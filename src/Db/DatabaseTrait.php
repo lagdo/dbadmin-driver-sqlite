@@ -85,7 +85,7 @@ trait DatabaseTrait
                     if (!empty($tableAttrs->indexes)) {
                         $field->autoIncrement = 0;
                     }
-                    $tableAttrs->fields[] = $this->util->processField($field, $field);
+                    $tableAttrs->fields[] = $this->admin->processField($field, $field);
                     $originals[$key] = $this->driver->escapeId($key);
                 }
             }
