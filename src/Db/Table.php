@@ -66,7 +66,7 @@ class Table extends AbstractTable
         $indexes = ['' => $primaryIndex];
         $query = "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = " . $this->driver->quote($table);
         $results = $this->driver->keyValues($query);
-        $rows = $this->driver->rows("PRAGMA index_list(" . $this->driver->table($table) . ")");
+        $rows = $this->driver->rows("PRAGMA index_list(" . $this->driver->escapeTableName($table) . ")");
         foreach ($rows as $row) {
             $index = $this->makeIndexEntity($row, $results, $table);
             if ($this->indexIsPrimary($index, $primaryIndex)) {
@@ -83,7 +83,7 @@ class Table extends AbstractTable
     public function foreignKeys(string $table)
     {
         $foreignKeys = [];
-        $query = 'PRAGMA foreign_key_list(' . $this->driver->table($table) . ')';
+        $query = 'PRAGMA foreign_key_list(' . $this->driver->escapeTableName($table) . ')';
         foreach ($this->driver->rows($query) as $row) {
             $name = $row["id"];
             if (!isset($foreignKeys[$name])) {

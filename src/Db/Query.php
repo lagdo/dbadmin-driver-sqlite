@@ -15,9 +15,9 @@ class Query extends AbstractQuery
     {
         return preg_match('~^INTO~', $query) ||
             $this->driver->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
-            $this->driver->limit($query, $where, 1, 0) :
+            $this->driver->getLimitClause($query, $where, 1, 0) :
             //! use primary key in tables with WITHOUT rowid
-            " $query WHERE rowid = (SELECT rowid FROM " . $this->driver->table($table) . $where . ' LIMIT 1)';
+            " $query WHERE rowid = (SELECT rowid FROM " . $this->driver->escapeTableName($table) . $where . ' LIMIT 1)';
     }
 
     /**
@@ -29,7 +29,7 @@ class Query extends AbstractQuery
         foreach ($rows as $set) {
             $values[] = "(" . implode(", ", $set) . ")";
         }
-        $result = $this->driver->execute("REPLACE INTO " . $this->driver->table($table) .
+        $result = $this->driver->execute("REPLACE INTO " . $this->driver->escapeTableName($table) .
             " (" . implode(", ", array_keys(reset($rows))) . ") VALUES\n" . implode(",\n", $values));
         return $result !== false;
     }

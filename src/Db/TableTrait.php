@@ -82,7 +82,7 @@ trait TableTrait
     private function tableFields(string $table): array
     {
         $fields = [];
-        $rows = $this->driver->rows('PRAGMA table_info(' . $this->driver->table($table) . ')');
+        $rows = $this->driver->rows('PRAGMA table_info(' . $this->driver->escapeTableName($table) . ')');
         $primary = "";
         foreach ($rows as $row) {
             $name = $row["name"];

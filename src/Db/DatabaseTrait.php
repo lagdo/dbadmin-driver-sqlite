@@ -140,34 +140,34 @@ trait DatabaseTrait
         }
         $tableAttrs->fields = array_merge($tableAttrs->fields, array_filter($tableAttrs->foreign));
         $tempName = ($table == $tableAttrs->name ? "dbadmin_{$tableAttrs->name}" : $tableAttrs->name);
-        if (!$this->driver->execute('CREATE TABLE ' . $this->driver->table($tempName) .
+        if (!$this->driver->execute('CREATE TABLE ' . $this->driver->escapeTableName($tempName) .
             " (\n" . implode(",\n", $tableAttrs->fields) . "\n)")) {
             // implicit ROLLBACK to not overwrite $this->driver->error()
             return false;
         }
         if ($table != '') {
-            if ($originals && !$this->driver->execute('INSERT INTO ' . $this->driver->table($tempName) .
+            if ($originals && !$this->driver->execute('INSERT INTO ' . $this->driver->escapeTableName($tempName) .
                     ' (' . implode(', ', $originals) . ') SELECT ' . implode(
                         ', ',
                         array_map(function ($key) {
                             return $this->driver->escapeId($key);
                         }, array_keys($originals))
-                    ) . ' FROM ' . $this->driver->table($table))) {
+                    ) . ' FROM ' . $this->driver->escapeTableName($table))) {
                 return false;
             }
             $triggers = [];
             foreach ($this->driver->triggers($table) as $trigger_name => $timing_event) {
                 $trigger = $this->driver->trigger($trigger_name);
                 $triggers[] = 'CREATE TRIGGER ' . $this->driver->escapeId($trigger_name) . ' ' .
-                    implode(' ', $timing_event) . ' ON ' . $this->driver->table($tableAttrs->name) . "\n$trigger[Statement]";
+                    implode(' ', $timing_event) . ' ON ' . $this->driver->escapeTableName($tableAttrs->name) . "\n$trigger[Statement]";
             }
             $autoIncrement = $tableAttrs->autoIncrement ? 0 :
                 $this->driver->result('SELECT seq FROM sqlite_sequence WHERE name = ' .
                     $this->driver->quote($table)); // if $autoIncrement is set then it will be updated later
             // Drop before creating indexes and triggers to allow using old names
-            if (!$this->driver->execute('DROP TABLE ' . $this->driver->table($table)) ||
-                ($table == $tableAttrs->name && !$this->driver->execute('ALTER TABLE ' . $this->driver->table($tempName) .
-                        ' RENAME TO ' . $this->driver->table($tableAttrs->name))) || !$this->alterIndexes($tableAttrs->name, $tableAttrs->indexes)
+            if (!$this->driver->execute('DROP TABLE ' . $this->driver->escapeTableName($table)) ||
+                ($table == $tableAttrs->name && !$this->driver->execute('ALTER TABLE ' . $this->driver->escapeTableName($tempName) .
+                        ' RENAME TO ' . $this->driver->escapeTableName($tableAttrs->name))) || !$this->alterIndexes($tableAttrs->name, $tableAttrs->indexes)
             ) {
                 return false;
             }

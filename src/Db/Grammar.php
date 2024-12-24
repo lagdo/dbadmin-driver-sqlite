@@ -17,7 +17,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function autoIncrement()
+    public function getAutoIncrementModifier()
     {
         return " PRIMARY KEY AUTOINCREMENT";
     }
@@ -25,7 +25,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function sqlForCreateTable(string $table, bool $autoIncrement, string $style)
+    public function getCreateTableQuery(string $table, bool $autoIncrement, string $style)
     {
         $query = $this->driver->result("SELECT sql FROM sqlite_master " .
             "WHERE type IN ('table', 'view') AND name = " . $this->driver->quote($table));
@@ -36,7 +36,7 @@ class Grammar extends AbstractGrammar
             $columns = implode(", ", array_map(function ($key) {
                 return $this->escapeId($key);
             }, $index->columns));
-            $query .= ";\n\n" . $this->sqlForCreateIndex($table, $index->type, $name, "($columns)");
+            $query .= ";\n\n" . $this->getCreateIndexQuery($table, $index->type, $name, "($columns)");
         }
         return $query;
     }
@@ -44,25 +44,25 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function sqlForCreateIndex(string $table, string $type, string $name, string $columns)
+    public function getCreateIndexQuery(string $table, string $type, string $name, string $columns)
     {
         return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
             $this->escapeId($name != "" ? $name : uniqid($table . "_")) .
-            " ON " . $this->table($table) . " $columns";
+            " ON " . $this->escapeTableName($table) . " $columns";
     }
 
     /**
      * @inheritDoc
      */
-    public function sqlForTruncateTable(string $table)
+    public function getTruncateTableQuery(string $table)
     {
-        return "DELETE FROM " . $this->table($table);
+        return "DELETE FROM " . $this->escapeTableName($table);
     }
 
     /**
      * @inheritDoc
      */
-    public function sqlForCreateTrigger(string $table)
+    public function getCreateTriggerQuery(string $table)
     {
         $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " .
             $this->driver->quote($table);

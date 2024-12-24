@@ -82,7 +82,7 @@ class Database extends AbstractDatabase
             $tableAttrs->fields[$key] = '  ' . implode($field);
         }
         $tableAttrs->fields = array_merge($tableAttrs->fields, array_filter($tableAttrs->foreign));
-        if (!$this->driver->execute('CREATE TABLE ' . $this->driver->table($tableAttrs->name) .
+        if (!$this->driver->execute('CREATE TABLE ' . $this->driver->escapeTableName($tableAttrs->name) .
             " (\n" . implode(",\n", $tableAttrs->fields) . "\n)")) {
             // implicit ROLLBACK to not overwrite $this->driver->error()
             return false;
@@ -99,11 +99,11 @@ class Database extends AbstractDatabase
         $clauses = $this->getAlterTableClauses($tableAttrs);
         $queries = [];
         foreach ($clauses as $clause) {
-            $queries[] = 'ALTER TABLE ' . $this->driver->table($table) . ' ' . $clause;
+            $queries[] = 'ALTER TABLE ' . $this->driver->escapeTableName($table) . ' ' . $clause;
         }
         if ($table != $tableAttrs->name) {
-            $queries[] = 'ALTER TABLE ' . $this->driver->table($table) . ' RENAME TO ' .
-                $this->driver->table($tableAttrs->name);
+            $queries[] = 'ALTER TABLE ' . $this->driver->escapeTableName($table) . ' RENAME TO ' .
+                $this->driver->escapeTableName($tableAttrs->name);
         }
         if (!$this->executeQueries($queries)) {
             return false;
@@ -124,7 +124,7 @@ class Database extends AbstractDatabase
         foreach (array_reverse($alter) as $index) {
             // Can't alter primary keys
             if ($index->type !== 'PRIMARY') {
-                $queries[] =  $this->driver->sqlForCreateIndex($table, $index->type,
+                $queries[] =  $this->driver->getCreateIndexQuery($table, $index->type,
                     $index->name, '(' . implode(', ', $index->columns) . ')');
             }
         }
