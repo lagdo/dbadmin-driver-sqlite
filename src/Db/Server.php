@@ -97,7 +97,7 @@ class Server extends AbstractServer
      */
     public function collations()
     {
-        $create = $this->admin->input()->hasTable();
+        $create = $this->utils->input->hasTable();
         return ($create) ? $this->driver->values("PRAGMA collation_list", 1) : [];
     }
 
@@ -121,12 +121,12 @@ class Server extends AbstractServer
     {
         $options = $this->driver->options();
         if ($this->fileExists($database, $options)) {
-            $this->driver->setError($this->trans->lang('File exists.'));
+            $this->driver->setError($this->utils->trans->lang('File exists.'));
             return false;
         }
         $filename = $this->filename($database, $options);
         if (!$this->validateName($filename)) {
-            $this->driver->setError($this->trans->lang('Please use one of the extensions %s.',
+            $this->driver->setError($this->utils->trans->lang('Please use one of the extensions %s.',
                 str_replace("|", ", ", $this->extensions)));
             return false;
         }
@@ -149,7 +149,7 @@ class Server extends AbstractServer
     {
         $filename = $this->filename($database, $this->driver->options());
         if (!@unlink($filename)) {
-            $this->driver->setError($this->trans->lang('File exists.'));
+            $this->driver->setError($this->utils->trans->lang('File exists.'));
             return false;
         }
         return true;
@@ -163,7 +163,7 @@ class Server extends AbstractServer
         $options = $this->driver->options();
         $filename = $this->filename($database, $options);
         if (!$this->validateName($filename)) {
-            $this->driver->setError($this->trans->lang('Please use one of the extensions %s.',
+            $this->driver->setError($this->utils->trans->lang('Please use one of the extensions %s.',
                 str_replace("|", ", ", $this->extensions)));
             return false;
         }

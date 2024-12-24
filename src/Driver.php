@@ -3,9 +3,8 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Exception\AuthException;
+use Lagdo\DbAdmin\Driver\Utils\Utils;
 use Lagdo\DbAdmin\Driver\Driver as AbstractDriver;
-use Lagdo\DbAdmin\Driver\TranslatorInterface;
-use Lagdo\DbAdmin\Driver\AdminInterface;
 
 use function class_exists;
 use function extension_loaded;
@@ -15,19 +14,18 @@ class Driver extends AbstractDriver
     /**
      * The constructor
      *
-     * @param AdminInterface $admin
-     * @param TranslatorInterface $trans
+     * @param Utils $utils
      * @param array $options
      */
-    public function __construct(AdminInterface $admin, TranslatorInterface $trans, array $options)
+    public function __construct(Utils $utils, array $options)
     {
-        parent::__construct($admin, $trans, $options);
+        parent::__construct($utils, $options);
 
-        $this->server = new Db\Server($this, $this->admin, $this->trans);
-        $this->database = new Db\Database($this, $this->admin, $this->trans);
-        $this->table = new Db\Table($this, $this->admin, $this->trans);
-        $this->query = new Db\Query($this, $this->admin, $this->trans);
-        $this->grammar = new Db\Grammar($this, $this->admin, $this->trans);
+        $this->server = new Db\Server($this, $this->utils);
+        $this->database = new Db\Database($this, $this->utils);
+        $this->table = new Db\Table($this, $this->utils);
+        $this->query = new Db\Query($this, $this->utils);
+        $this->grammar = new Db\Grammar($this, $this->utils);
     }
 
     /**
@@ -80,13 +78,13 @@ class Driver extends AbstractDriver
     protected function createConnection()
     {
         if (!$this->options('prefer_pdo', false) && class_exists("SQLite3")) {
-            $connection = new Db\Sqlite\Connection($this, $this->admin, $this->trans, 'SQLite3');
+            $connection = new Db\Sqlite\Connection($this, $this->utils, 'SQLite3');
             return $this->connection = $connection;
         }
         if (extension_loaded("pdo_sqlite")) {
-            $connection = new Db\Pdo\Connection($this, $this->admin, $this->trans, 'PDO_SQLite');
+            $connection = new Db\Pdo\Connection($this, $this->utils, 'PDO_SQLite');
             return $this->connection = $connection;
         }
-        throw new AuthException($this->trans->lang('No package installed to open a Sqlite database.'));
+        throw new AuthException($this->utils->trans->lang('No package installed to open a Sqlite database.'));
     }
 }

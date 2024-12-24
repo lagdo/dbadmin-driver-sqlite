@@ -54,7 +54,7 @@ class Connection extends AbstractConnection
         $space = $this->spaceRegex();
         if (preg_match("~^$space*+ATTACH\\b~i", $query, $match)) {
             // PHP doesn't support setting SQLITE_LIMIT_ATTACHED
-            $this->driver->setError($this->trans->lang('ATTACH queries are not supported.'));
+            $this->driver->setError($this->utils->trans->lang('ATTACH queries are not supported.'));
             return false;
         }
 
@@ -76,7 +76,7 @@ class Connection extends AbstractConnection
      */
     public function quote(string $string)
     {
-        if ($this->admin->isUtf8($string) || !is_array($unpacked = unpack('H*', $string))) {
+        if ($this->utils->str->isUtf8($string) || !is_array($unpacked = unpack('H*', $string))) {
             return "'" . $this->client->escapeString($string) . "'";
         }
         return "x'" . reset($unpacked) . "'";
