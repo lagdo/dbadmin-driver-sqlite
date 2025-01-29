@@ -45,7 +45,7 @@ trait TableTrait
     private function defaultvalue(array $row)
     {
         $default = $row["dflt_value"];
-        if (preg_match("~'(.*)'~", $default, $match)) {
+        if (preg_match("~'(.*)'~", $default ?? '', $match)) {
             return str_replace("''", "'", $match[1]);
         }
         if ($default == "NULL") {
