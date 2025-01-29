@@ -38,7 +38,14 @@ class Statement implements StatementInterface
      */
     public function rowCount()
     {
-        return $this->result->numColumns();
+        // Todo: find a simpler way to count the rows.
+        $rowCount = 0;
+        $this->result->reset();
+        while ($this->result->fetchArray()) {
+            $rowCount++;
+        }
+        $this->result->reset();
+        return $rowCount;
     }
 
     /**
@@ -73,6 +80,6 @@ class Statement implements StatementInterface
      */
     public function __destruct()
     {
-        return $this->result->finalize();
+        $this->result->finalize();
     }
 }
