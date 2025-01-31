@@ -30,7 +30,7 @@
             "Lagdo\\DbAdmin\\Driver\\Sqlite\\": "src/"
         },
         "files": [
-            "src/start.php"
+            "src/register.php"
         ]
     },
     "autoload-dev": {
