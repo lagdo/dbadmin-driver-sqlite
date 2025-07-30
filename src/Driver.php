@@ -39,7 +39,7 @@ class Driver extends AbstractDriver
     /**
      * @inheritDoc
      */
-    protected function beforeConnectConfig()
+    protected function beforeConnection()
     {
         // Init config
         $this->config->jush = 'sqlite';
@@ -68,7 +68,7 @@ class Driver extends AbstractDriver
     /**
      * @inheritDoc
      */
-    protected function afterConnectConfig()
+    protected function afterConnection()
     {}
 
     /**
