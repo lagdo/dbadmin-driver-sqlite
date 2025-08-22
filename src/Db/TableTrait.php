@@ -152,7 +152,7 @@ trait TableTrait
             $index->descs[] = null;
         }
         if (preg_match('~^CREATE( UNIQUE)? INDEX ' . preg_quote($this->driver->escapeId($index->name) . ' ON ' .
-                $this->driver->escapeId($table), '~') . ' \((.*)\)$~i', $results[$index->name], $regs)) {
+                $this->driver->escapeId($table), '~') . ' \((.*)\)$~i', $results[$index->name] ?? '', $regs)) {
             preg_match_all('/("[^"]*+")+( DESC)?/', $regs[2], $matches);
             foreach ($matches[2] as $key => $val) {
                 if ($val) {
