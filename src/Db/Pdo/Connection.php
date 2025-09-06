@@ -14,8 +14,7 @@ class Connection extends PdoConnection
      */
     public function open(string $database, string $schema = '')
     {
-        $options = $this->driver->options();
-        $filename = $this->filename($database, $options);
+        $filename = $this->filename($database, $this->options);
         $this->dsn("sqlite:$filename", '', '');
         $this->query('PRAGMA foreign_keys = 1');
         return true;

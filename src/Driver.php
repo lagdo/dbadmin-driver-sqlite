@@ -75,14 +75,14 @@ class Driver extends AbstractDriver
      * @inheritDoc
      * @throws AuthException
      */
-    protected function createConnection()
+    public function createConnection(array $options)
     {
         if (!$this->options('prefer_pdo', false) && class_exists("SQLite3")) {
-            $connection = new Db\Sqlite\Connection($this, $this->utils, 'SQLite3');
+            $connection = new Db\Sqlite\Connection($this, $this->utils, $options, 'SQLite3');
             return $this->connection = $connection;
         }
         if (extension_loaded("pdo_sqlite")) {
-            $connection = new Db\Pdo\Connection($this, $this->utils, 'PDO_SQLite');
+            $connection = new Db\Pdo\Connection($this, $this->utils, $options, 'PDO_SQLite');
             return $this->connection = $connection;
         }
         throw new AuthException($this->utils->trans->lang('No package installed to open a Sqlite database.'));

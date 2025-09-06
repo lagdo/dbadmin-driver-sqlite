@@ -24,8 +24,7 @@ class Connection extends AbstractConnection
      */
     public function open(string $database, string $schema = '')
     {
-        $options = $this->driver->options();
-        $filename = $this->filename($database, $options);
+        $filename = $this->filename($database, $this->options);
         $flags = $schema === '__create__' ? SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE : SQLITE3_OPEN_READWRITE;
         try {
             $this->client = new SQLite3($filename, $flags);
