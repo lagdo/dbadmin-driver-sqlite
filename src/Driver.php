@@ -77,7 +77,8 @@ class Driver extends AbstractDriver
      */
     public function createConnection(array $options)
     {
-        if (!$this->options('prefer_pdo', false) && class_exists("SQLite3")) {
+        $preferPdo = $options['prefer_pdo'] ?? false;
+        if (!$preferPdo && class_exists("SQLite3")) {
             $connection = new Db\Sqlite\Connection($this, $this->utils, $options, 'SQLite3');
             return $this->connection = $connection;
         }
