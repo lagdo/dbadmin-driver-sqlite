@@ -2,6 +2,7 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
+use Lagdo\DbAdmin\Driver\Exception\DbException;
 use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
 use Lagdo\DbAdmin\Driver\Db\StatementInterface;
 
@@ -121,14 +122,12 @@ class Server extends AbstractServer
     {
         $options = $this->driver->options();
         if ($this->fileExists($database, $options)) {
-            $this->driver->setError($this->utils->trans->lang('File exists.'));
-            return false;
+            throw new DbException($this->utils->trans->lang('File exists.'));
         }
         $filename = $this->filename($database, $options);
         if (!$this->validateName($filename)) {
-            $this->driver->setError($this->utils->trans->lang('Please use one of the extensions %s.',
+            throw new DbException($this->utils->trans->lang('Please use one of the extensions %s.',
                 str_replace("|", ", ", $this->extensions)));
-            return false;
         }
         try {
             $connection = $this->driver->connect($database, '__create__'); // New connection
@@ -136,8 +135,7 @@ class Server extends AbstractServer
             $connection->query('CREATE TABLE dbadmin (i)'); // otherwise creates empty file
             $connection->query('DROP TABLE dbadmin');
         } catch (Exception $ex) {
-            $this->driver->setError($ex->getMessage());
-            return false;
+            throw new DbException($ex->getMessage());
         }
         return true;
     }
@@ -149,8 +147,7 @@ class Server extends AbstractServer
     {
         $filename = $this->filename($database, $this->driver->options());
         if (!@unlink($filename)) {
-            $this->driver->setError($this->utils->trans->lang('File exists.'));
-            return false;
+            throw new DbException($this->utils->trans->lang('File exists.'));
         }
         return true;
     }
@@ -163,9 +160,8 @@ class Server extends AbstractServer
         $options = $this->driver->options();
         $filename = $this->filename($database, $options);
         if (!$this->validateName($filename)) {
-            $this->driver->setError($this->utils->trans->lang('Please use one of the extensions %s.',
+            throw new DbException($this->utils->trans->lang('Please use one of the extensions %s.',
                 str_replace("|", ", ", $this->extensions)));
-            return false;
         }
         return @rename($this->filename($this->driver->database(), $options), $filename);
     }

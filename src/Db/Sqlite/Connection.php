@@ -29,7 +29,7 @@ class Connection extends AbstractConnection
         try {
             $this->client = new SQLite3($filename, $flags);
         } catch (Exception $ex) {
-            $this->driver->setError($ex->getMessage());
+            $this->setError($ex->getMessage());
             return false;
         }
         $this->query("PRAGMA foreign_keys = 1");
@@ -53,15 +53,15 @@ class Connection extends AbstractConnection
         $space = $this->spaceRegex();
         if (preg_match("~^$space*+ATTACH\\b~i", $query, $match)) {
             // PHP doesn't support setting SQLITE_LIMIT_ATTACHED
-            $this->driver->setError($this->utils->trans->lang('ATTACH queries are not supported.'));
+            $this->setError($this->utils->trans->lang('ATTACH queries are not supported.'));
             return false;
         }
 
         $result = @$this->client->query($query);
-        $this->driver->setError();
+        $this->setError();
         if (!$result) {
-            $this->driver->setErrno($this->client->lastErrorCode());
-            $this->driver->setError($this->client->lastErrorMsg());
+            $this->setErrno($this->client->lastErrorCode());
+            $this->setError($this->client->lastErrorMsg());
             return false;
         } elseif ($result->numColumns() > 0) {
             return new Statement($result);
