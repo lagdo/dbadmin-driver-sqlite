@@ -64,12 +64,4 @@ class Query extends AbstractQuery
     {
         return $this->driver->result("SELECT LAST_INSERT_ROWID()");
     }
-
-    /**
-     * @inheritDoc
-     */
-    public function explain(ConnectionInterface $connection, string $query)
-    {
-        return $connection->query("EXPLAIN QUERY PLAN $query");
-    }
 }

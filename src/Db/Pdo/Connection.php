@@ -4,10 +4,12 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Pdo;
 
 use Lagdo\DbAdmin\Driver\Db\Pdo\Connection as PdoConnection;
 use Lagdo\DbAdmin\Driver\Sqlite\Db\ConfigTrait;
+use Lagdo\DbAdmin\Driver\Sqlite\Db\ConnectionTrait;
 
 class Connection extends PdoConnection
 {
     use ConfigTrait;
+    use ConnectionTrait;
 
     /**
      * @inheritDoc
