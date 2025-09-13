@@ -5,14 +5,11 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Sqlite;
 use Lagdo\DbAdmin\Driver\Db\Connection as AbstractConnection;
 use Lagdo\DbAdmin\Driver\Sqlite\Db\ConfigTrait;
 use Lagdo\DbAdmin\Driver\Sqlite\Db\ConnectionTrait;
-
 use Exception;
 use SQLite3;
 
 use function preg_match;
 use function is_array;
-use function is_object;
-use function count;
 use function unpack;
 use function reset;
 
@@ -52,7 +49,7 @@ class Connection extends AbstractConnection
      */
     public function query(string $query, bool $unbuffered = false)
     {
-        $space = $this->spaceRegex();
+        $space = $this->utils->str->spaceRegex();
         if (preg_match("~^$space*+ATTACH\\b~i", $query, $match)) {
             // PHP doesn't support setting SQLITE_LIMIT_ATTACHED
             $this->setError($this->utils->trans->lang('ATTACH queries are not supported.'));
@@ -85,7 +82,7 @@ class Connection extends AbstractConnection
 
     public function multiQuery(string $query)
     {
-        $this->statement = $this->driver->execute($query);
+        $this->statement = $this->query($query);
         return $this->statement !== false;
     }
 
@@ -100,21 +97,5 @@ class Connection extends AbstractConnection
     public function nextResult()
     {
         return false;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function result(string $query, int $field = -1)
-    {
-        if ($field < 0) {
-            $field = $this->defaultField();
-        }
-        $result = $this->driver->execute($query);
-        if (!is_object($result)) {
-            return null;
-        }
-        $row = $result->fetchRow();
-        return is_array($row) && count($row) > $field ? $row[$field] : null;
     }
 }

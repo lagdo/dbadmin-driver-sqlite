@@ -69,7 +69,9 @@ class Driver extends AbstractDriver
      * @inheritDoc
      */
     protected function afterConnection()
-    {}
+    {
+        $this->server->setConnection($this->connection);
+    }
 
     /**
      * @inheritDoc
