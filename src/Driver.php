@@ -68,7 +68,13 @@ class Driver extends AbstractDriver
     /**
      * @inheritDoc
      */
-    protected function afterConnection()
+    protected function configConnection()
+    {}
+
+    /**
+     * @inheritDoc
+     */
+    protected function openedConnection()
     {
         $this->server->setConnection($this->connection);
     }

@@ -21,7 +21,7 @@ class Connection extends AbstractConnection
     /**
      * @inheritDoc
      */
-    public function open(string $database, string $schema = '')
+    public function open(string $database, string $schema = ''): bool
     {
         $filename = $this->filename($database, $this->options);
         $flags = $schema === '__create__' ? SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE : SQLITE3_OPEN_READWRITE;
