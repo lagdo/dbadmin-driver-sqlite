@@ -32,7 +32,7 @@ class Database extends AbstractDatabase
         $query = "SELECT count(*) FROM sqlite_master WHERE type IN ('table', 'view')";
         foreach ($databases as $database) {
             $counts[$database] = 0;
-            $connection = $this->driver->newConnection($database);
+            $connection = $this->driver->connectToDatabase($database);
             $statement = $connection->query($query);
             if (is_object($statement) && ($row = $statement->fetchRow())) {
                 $counts[$database] = intval($row[0]);
