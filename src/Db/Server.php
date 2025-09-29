@@ -9,16 +9,15 @@ use Lagdo\DbAdmin\Driver\Db\StatementInterface;
 use DirectoryIterator;
 use Exception;
 
-use function is_a;
 use function count;
-use function rtrim;
+use function explode;
+use function get_current_user;
 use function intval;
+use function is_a;
 use function preg_match;
-use function file_exists;
+use function rename;
 use function str_replace;
 use function unlink;
-use function explode;
-use function rename;
 
 class Server extends AbstractServer
 {
@@ -40,6 +39,14 @@ class Server extends AbstractServer
         "max_page_count", "read_uncommitted", "recursive_triggers", "reverse_unordered_selects",
         "secure_delete", "short_column_names", "synchronous", "temp_store", "temp_store_directory",
         "schema_version", "integrity_check", "quick_check"];
+
+    /**
+     * @inheritDoc
+     */
+    public function user()
+    {
+        return get_current_user(); // should return effective user
+    }
 
     /**
      * @inheritDoc
@@ -73,12 +80,14 @@ class Server extends AbstractServer
         }
         $pageSize = 0;
         $statement = $connection->query('pragma page_size');
-        if (is_a($statement, StatementInterface::class) && ($row = $statement->fetchRow())) {
+        if (is_a($statement, StatementInterface::class) &&
+            ($row = $statement->fetchRow())) {
             $pageSize = intval($row[0]);
         }
         $pageCount = 0;
         $statement = $connection->query('pragma page_count');
-        if (is_a($statement, StatementInterface::class) && ($row = $statement->fetchRow())) {
+        if (is_a($statement, StatementInterface::class) &&
+            ($row = $statement->fetchRow())) {
             $pageCount = intval($row[0]);
         }
         return $pageSize * $pageCount;
@@ -98,8 +107,8 @@ class Server extends AbstractServer
      */
     public function collations()
     {
-        $create = $this->utils->input->hasTable();
-        return ($create) ? $this->driver->values("PRAGMA collation_list", 1) : [];
+        return $this->utils->input->hasTable() ?
+            $this->driver->values("PRAGMA collation_list", 1) : [];
     }
 
     /**

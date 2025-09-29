@@ -2,9 +2,12 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
-use Lagdo\DbAdmin\Driver\Db\ConnectionInterface;
-
 use Lagdo\DbAdmin\Driver\Db\Query as AbstractQuery;
+
+use function array_keys;
+use function implode;
+use function preg_match;
+use function preg_replace;
 
 class Query extends AbstractQuery
 {
@@ -29,17 +32,11 @@ class Query extends AbstractQuery
         foreach ($rows as $set) {
             $values[] = "(" . implode(", ", $set) . ")";
         }
-        $result = $this->driver->execute("REPLACE INTO " . $this->driver->escapeTableName($table) .
-            " (" . implode(", ", array_keys(reset($rows))) . ") VALUES\n" . implode(",\n", $values));
+        $result = $this->driver->execute("REPLACE INTO " .
+            $this->driver->escapeTableName($table) . " (" .
+            implode(", ", array_keys(reset($rows))) .
+            ") VALUES\n" . implode(",\n", $values));
         return $result !== false;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function user()
-    {
-        return get_current_user(); // should return effective user
     }
 
     /**
