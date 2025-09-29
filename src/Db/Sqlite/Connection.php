@@ -3,6 +3,8 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Db\Connection as AbstractConnection;
+use Lagdo\DbAdmin\Driver\Db\PreparedStatement;
+use Lagdo\DbAdmin\Driver\Db\StatementInterface;
 use Lagdo\DbAdmin\Driver\Sqlite\Db\ConfigTrait;
 use Lagdo\DbAdmin\Driver\Sqlite\Db\ConnectionTrait;
 use Exception;
@@ -97,5 +99,33 @@ class Connection extends AbstractConnection
     public function nextResult()
     {
         return false;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function prepareStatement(string $query): PreparedStatement
+    {
+        [$params] = $this->getPreparedParams($query, false);
+        $statement = $this->client->prepare($query);
+        return new PreparedStatement($query, $statement, $params);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function executeStatement(PreparedStatement $statement,
+        array $values): ?StatementInterface
+    {
+        if (!$statement->prepared()) {
+            return null;
+        }
+
+        $values = $statement->paramValues($values, true);
+        foreach ($values as $name => $value) {
+            $statement->statement()->bindValue($name, $value);
+        }
+        $result = $statement->statement()->execute();
+        return !$result ? null : new Statement($result);
     }
 }
