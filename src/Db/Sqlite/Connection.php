@@ -106,7 +106,7 @@ class Connection extends AbstractConnection
      */
     public function prepareStatement(string $query): PreparedStatement
     {
-        [$params] = $this->getPreparedParams($query, false);
+        [$params] = $this->getPreparedParams($query);
         $statement = $this->client->prepare($query);
         return new PreparedStatement($query, $statement, $params);
     }
