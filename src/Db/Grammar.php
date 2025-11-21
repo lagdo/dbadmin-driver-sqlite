@@ -48,7 +48,7 @@ class Grammar extends AbstractGrammar
     {
         return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
             $this->escapeId($name != "" ? $name : uniqid($table . "_")) .
-            " ON " . $this->escapeTableName($table) . " $columns";
+            " ON " . $this->driver->escapeTableName($table) . " $columns";
     }
 
     /**
@@ -56,7 +56,7 @@ class Grammar extends AbstractGrammar
      */
     public function getTruncateTableQuery(string $table)
     {
-        return "DELETE FROM " . $this->escapeTableName($table);
+        return "DELETE FROM " . $this->driver->escapeTableName($table);
     }
 
     /**
