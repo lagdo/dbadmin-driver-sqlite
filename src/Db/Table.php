@@ -7,12 +7,13 @@ use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
 use Lagdo\DbAdmin\Driver\Entity\ForeignKeyEntity;
 use Lagdo\DbAdmin\Driver\Db\Table as AbstractTable;
 
-use function str_replace;
+use function array_combine;
+use function implode;
 use function preg_match;
 use function preg_match_all;
 use function preg_replace;
+use function str_replace;
 use function strtoupper;
-use function implode;
 
 class Table extends AbstractTable
 {
@@ -40,7 +41,8 @@ class Table extends AbstractTable
     public function fields(string $table)
     {
         $fields = $this->tableFields($table);
-        $query = "SELECT sql FROM sqlite_master WHERE type IN ('table', 'view') AND name = " . $this->driver->quote($table);
+        $query = "SELECT sql FROM sqlite_master WHERE type IN ('table', 'view') AND name = " .
+            $this->driver->quote($table);
         $result = $this->driver->result($query);
         $pattern = '~(("[^"]*+")+|[a-z0-9_]+)\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i';
         preg_match_all($pattern, $result, $matches, PREG_SET_ORDER);
@@ -94,6 +96,18 @@ class Table extends AbstractTable
             $foreignKeys[$name]->target[] = $row["to"];
         }
         return $foreignKeys;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function checkConstraints(TableEntity $status): array
+    {
+        $table = $this->driver->quote($status->name);
+        $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $table";
+        preg_match_all('~ CHECK *(\( *(((?>[^()]*[^() ])|(?1))*) *\))~',
+            $this->driver->result($query, 0) ?? '', $matches); //! could be inside a comment
+        return array_combine($matches[2], $matches[2]);
     }
 
     /**
@@ -154,6 +168,7 @@ class Table extends AbstractTable
         if ($name == "") {
             return new TriggerEntity('', '', "BEGIN\n\t;\nEND");
         }
+
         $idf = '(?:[^`"\s]+|`[^`]*`|"[^"]*")+';
         $options = $this->triggerOptions();
         preg_match("~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $options["Timing"]) .
