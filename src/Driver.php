@@ -54,13 +54,14 @@ class Driver extends AbstractDriver
             "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"]; // REGEXP can be user defined function;
         $this->config->functions = ["hex", "length", "lower", "round", "unixepoch", "upper"];
         $this->config->grouping = ["avg", "count", "count distinct", "group_concat", "max", "min", "sum"];
-        $this->config->editFunctions = [[
+        $this->config->insertFunctions = [
             // "text" => "date('now')/time('now')/datetime('now')",
-        ],[
+        ];
+        $this->config->editFunctions = [
             "integer|real|numeric" => "+/-",
             // "text" => "date/time/datetime",
             "text" => "||",
-        ]];
+        ];
         $this->config->features = ['columns', 'database', 'drop_col', 'dump', 'indexes', 'descidx',
             'move_col', 'sql', 'status', 'table', 'trigger', 'variables', 'view', 'view_trigger'];
     }
@@ -69,7 +70,11 @@ class Driver extends AbstractDriver
      * @inheritDoc
      */
     protected function configConnection()
-    {}
+    {
+        if ($this->minVersion(3.31, 0)) {
+            $this->config->generated = ["STORED", "VIRTUAL"];
+        }
+    }
 
     /**
      * @inheritDoc
