@@ -74,7 +74,7 @@ class Server extends AbstractServer
      */
     public function databaseSize(string $database)
     {
-        $connection = $this->driver->connectToDatabase($database); // New connection
+        $connection = $this->driver->newConnection($database); // New connection
         if (!$connection) {
             return 0;
         }
@@ -139,7 +139,7 @@ class Server extends AbstractServer
                 str_replace("|", ", ", $this->extensions)));
         }
         try {
-            $connection = $this->driver->connectToDatabase($database, '__create__'); // New connection
+            $connection = $this->driver->newConnection($database, '__create__'); // New connection
             $connection->query('PRAGMA encoding = "UTF-8"');
             $connection->query('CREATE TABLE dbadmin (i)'); // otherwise creates empty file
             $connection->query('DROP TABLE dbadmin');
