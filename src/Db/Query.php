@@ -26,7 +26,7 @@ class Query extends AbstractQuery
     /**
      * @inheritDoc
      */
-    public function insertOrUpdate(string $table, array $rows, array $primary)
+    public function insertOrUpdate(string $table, array $rows, array $primary): bool
     {
         $values = [];
         foreach ($rows as $set) {
@@ -42,7 +42,7 @@ class Query extends AbstractQuery
     /**
      * @inheritDoc
      */
-    public function view(string $name)
+    public function view(string $name): array
     {
         return [
             'name' => $name,
@@ -57,7 +57,7 @@ class Query extends AbstractQuery
     /**
      * @inheritDoc
      */
-    public function lastAutoIncrementId()
+    public function lastAutoIncrementId(): string
     {
         return $this->driver->result("SELECT LAST_INSERT_ROWID()");
     }

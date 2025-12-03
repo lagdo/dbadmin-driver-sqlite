@@ -2,8 +2,9 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite;
 
-use Lagdo\DbAdmin\Driver\Exception\AuthException;
+use Lagdo\DbAdmin\Driver\Db\ConnectionInterface;
 use Lagdo\DbAdmin\Driver\Driver as AbstractDriver;
+use Lagdo\DbAdmin\Driver\Exception\AuthException;
 
 use function class_exists;
 use function extension_loaded;
@@ -86,7 +87,7 @@ class Driver extends AbstractDriver
     /**
      * @inheritDoc
      */
-    protected function beforeConnection()
+    protected function beforeConnection(): void
     {
         // Init config
         $this->config->jush = 'sqlite';
@@ -116,7 +117,7 @@ class Driver extends AbstractDriver
     /**
      * @inheritDoc
      */
-    protected function configConnection()
+    protected function configConnection(): void
     {
         if ($this->minVersion(3.31, 0)) {
             $this->config->generated = ["STORED", "VIRTUAL"];
@@ -126,7 +127,7 @@ class Driver extends AbstractDriver
     /**
      * @inheritDoc
      */
-    protected function connectionOpened()
+    protected function connectionOpened(): void
     {
         $this->_server()->setConnection($this->connection);
     }
@@ -135,7 +136,7 @@ class Driver extends AbstractDriver
      * @inheritDoc
      * @throws AuthException
      */
-    public function createConnection(array $options)
+    public function createConnection(array $options): ConnectionInterface|null
     {
         $preferPdo = $options['prefer_pdo'] ?? false;
         if (!$preferPdo && class_exists("SQLite3")) {

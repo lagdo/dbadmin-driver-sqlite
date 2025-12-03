@@ -40,7 +40,7 @@ class Connection extends AbstractConnection
     /**
      * @inheritDoc
      */
-    public function serverInfo()
+    public function serverInfo(): string
     {
         $version = SQLite3::version();
         return $version["versionString"];
@@ -49,7 +49,7 @@ class Connection extends AbstractConnection
     /**
      * @inheritDoc
      */
-    public function query(string $query, bool $unbuffered = false)
+    public function query(string $query, bool $unbuffered = false): StatementInterface|bool
     {
         $space = $this->utils->str->spaceRegex();
         if (preg_match("~^$space*+ATTACH\\b~i", $query, $match)) {
@@ -74,7 +74,7 @@ class Connection extends AbstractConnection
     /**
      * @inheritDoc
      */
-    public function quote(string $string)
+    public function quote(string $string): string
     {
         if ($this->utils->str->isUtf8($string) || !is_array($unpacked = unpack('H*', $string))) {
             return "'" . $this->client->escapeString($string) . "'";
@@ -82,7 +82,7 @@ class Connection extends AbstractConnection
         return "x'" . reset($unpacked) . "'";
     }
 
-    public function multiQuery(string $query)
+    public function multiQuery(string $query): bool
     {
         $this->statement = $this->query($query);
         return $this->statement !== false;
@@ -91,12 +91,12 @@ class Connection extends AbstractConnection
     /**
      * @inheritDoc
      */
-    public function storedResult()
+    public function storedResult(): StatementInterface|bool
     {
         return $this->statement;
     }
 
-    public function nextResult()
+    public function nextResult(): mixed
     {
         return false;
     }

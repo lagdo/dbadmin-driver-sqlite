@@ -43,7 +43,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function user()
+    public function user(): string
     {
         return get_current_user(); // should return effective user
     }
@@ -51,7 +51,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function databases(bool $flush)
+    public function databases(bool $flush): array
     {
         $databases = [];
         $directory = $this->directory($this->driver->options());
@@ -72,7 +72,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function databaseSize(string $database)
+    public function databaseSize(string $database): int
     {
         $connection = $this->driver->newConnection($database); // New connection
         if (!$connection) {
@@ -96,7 +96,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function databaseCollation(string $database, array $collations)
+    public function databaseCollation(string $database, array $collations): string
     {
         // there is no database list so $database == $this->driver->database()
         return $this->driver->result("PRAGMA encoding");
@@ -105,7 +105,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function collations()
+    public function collations(): array
     {
         return $this->utils->input->hasTable() ?
             $this->driver->values("PRAGMA collation_list", 1) : [];
@@ -127,7 +127,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function createDatabase(string $database, string $collation)
+    public function createDatabase(string $database, string $collation): bool
     {
         $options = $this->driver->options();
         if ($this->fileExists($database, $options)) {
@@ -152,7 +152,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function dropDatabase(string $database)
+    public function dropDatabase(string $database): bool
     {
         $filename = $this->filename($database, $this->driver->options());
         if (!@unlink($filename)) {
@@ -164,7 +164,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function renameDatabase(string $database, string $collation)
+    public function renameDatabase(string $database, string $collation): bool
     {
         $options = $this->driver->options();
         $filename = $this->filename($database, $options);
@@ -178,7 +178,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function variables()
+    public function variables(): array
     {
         $variables = [];
         foreach ($this->variableNames as $key) {
@@ -190,7 +190,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    public function statusVariables()
+    public function statusVariables(): array
     {
         $variables = [];
         if (!($options = $this->driver->values("PRAGMA compile_options"))) {

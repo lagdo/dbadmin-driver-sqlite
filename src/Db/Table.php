@@ -22,7 +22,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function isView(TableEntity $tableStatus)
+    public function isView(TableEntity $tableStatus): bool
     {
         return $tableStatus->engine == 'view';
     }
@@ -30,7 +30,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function supportForeignKeys(TableEntity $tableStatus)
+    public function supportForeignKeys(TableEntity $tableStatus): bool
     {
         return !$this->driver->result("SELECT sqlite_compileoption_used('OMIT_FOREIGN_KEY')");
     }
@@ -38,7 +38,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function fields(string $table)
+    public function fields(string $table): array
     {
         $fields = $this->tableFields($table);
         $query = "SELECT sql FROM sqlite_master WHERE type IN ('table', 'view') AND name = " .
@@ -58,7 +58,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function indexes(string $table)
+    public function indexes(string $table): array
     {
         $primaryIndex = $this->makePrimaryIndex($table);
         if ($primaryIndex === null) {
@@ -82,7 +82,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function foreignKeys(string $table)
+    public function foreignKeys(string $table): array
     {
         $foreignKeys = [];
         $query = 'PRAGMA foreign_key_list(' . $this->driver->escapeTableName($table) . ')';
@@ -113,7 +113,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function tableStatus(string $table, bool $fast = false)
+    public function tableStatus(string $table, bool $fast = false): TableEntity|null
     {
         $rows = $this->queryStatus($table);
         if (!($row = reset($rows))) {
@@ -125,7 +125,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function tableStatuses(bool $fast = false)
+    public function tableStatuses(bool $fast = false): array
     {
         $tables = [];
         $rows = $this->queryStatus();
@@ -138,7 +138,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function tableNames()
+    public function tableNames(): array
     {
         $tables = [];
         $rows = $this->queryStatus();
@@ -151,7 +151,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function triggerOptions()
+    public function triggerOptions(): array
     {
         return [
             "Timing" => ["BEFORE", "AFTER", "INSTEAD OF"],
@@ -163,7 +163,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function trigger(string $name, string $table = '')
+    public function trigger(string $name, string $table = ''): TriggerEntity|null
     {
         if ($name == "") {
             return new TriggerEntity('', '', "BEGIN\n\t;\nEND");
@@ -183,7 +183,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function triggers(string $table)
+    public function triggers(string $table): array
     {
         $triggers = [];
         $options = $this->triggerOptions();
@@ -199,7 +199,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function tableHelp(string $name)
+    public function tableHelp(string $name): string
     {
         if ($name == "sqlite_sequence") {
             return "fileformat2.html#seqtab";

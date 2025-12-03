@@ -36,7 +36,7 @@ class Statement implements StatementInterface
     /**
      * @inheritDoc
      */
-    public function rowCount()
+    public function rowCount(): int
     {
         // Todo: find a simpler way to count the rows.
         $rowCount = 0;
@@ -51,23 +51,23 @@ class Statement implements StatementInterface
     /**
      * @inheritDoc
      */
-    public function fetchAssoc()
+    public function fetchAssoc(): array|null
     {
-        return $this->result->fetchArray(SQLITE3_ASSOC);
+        return $this->result->fetchArray(SQLITE3_ASSOC) ?: null;
     }
 
     /**
      * @inheritDoc
      */
-    public function fetchRow()
+    public function fetchRow(): array|null
     {
-        return $this->result->fetchArray(SQLITE3_NUM);
+        return $this->result->fetchArray(SQLITE3_NUM) ?: null;
     }
 
     /**
      * @inheritDoc
      */
-    public function fetchField()
+    public function fetchField(): StatementFieldEntity|null
     {
         $column = $this->offset++;
         $type = $this->result->columnType($column);

@@ -17,7 +17,7 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function tables()
+    public function tables(): array
     {
         return $this->driver->keyValues('SELECT name, type FROM sqlite_master ' .
             "WHERE type IN ('table', 'view') ORDER BY (name = 'sqlite_sequence'), name");
@@ -26,7 +26,7 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function countTables(array $databases)
+    public function countTables(array $databases): array
     {
         $counts = [];
         $query = "SELECT count(*) FROM sqlite_master WHERE type IN ('table', 'view')";
@@ -44,7 +44,7 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function dropViews(array $views)
+    public function dropViews(array $views): bool
     {
         return $this->driver->applyQueries('DROP VIEW', $views);
     }
@@ -52,7 +52,7 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function dropTables(array $tables)
+    public function dropTables(array $tables): bool
     {
         return $this->driver->applyQueries('DROP TABLE', $tables);
     }
@@ -60,7 +60,7 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function moveTables(array $tables, array $views, string $target)
+    public function moveTables(array $tables, array $views, string $target): bool
     {
         return false;
     }
@@ -68,7 +68,7 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function truncateTables(array $tables)
+    public function truncateTables(array $tables): bool
     {
         return $this->driver->applyQueries('DELETE FROM', $tables);
     }
@@ -76,7 +76,7 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function createTable(TableEntity $tableAttrs)
+    public function createTable(TableEntity $tableAttrs): bool
     {
         foreach ($tableAttrs->fields as $key => $field) {
             $tableAttrs->fields[$key] = '  ' . implode($field);
@@ -94,7 +94,7 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function alterTable(string $table, TableEntity $tableAttrs)
+    public function alterTable(string $table, TableEntity $tableAttrs): bool
     {
         $clauses = $this->getAlterTableClauses($tableAttrs);
         $queries = [];
@@ -115,7 +115,7 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function alterIndexes(string $table, array $alter, array $drop)
+    public function alterIndexes(string $table, array $alter, array $drop): bool
     {
         $queries = [];
         foreach (array_reverse($drop) as $index) {

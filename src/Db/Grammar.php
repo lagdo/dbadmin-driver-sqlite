@@ -17,7 +17,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getAutoIncrementModifier()
+    public function getAutoIncrementModifier(): string
     {
         return " PRIMARY KEY AUTOINCREMENT";
     }
@@ -25,7 +25,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getCreateTableQuery(string $table, bool $autoIncrement, string $style)
+    public function getCreateTableQuery(string $table, bool $autoIncrement, string $style): string
     {
         $query = $this->driver->result("SELECT sql FROM sqlite_master " .
             "WHERE type IN ('table', 'view') AND name = " . $this->driver->quote($table));
@@ -44,7 +44,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getCreateIndexQuery(string $table, string $type, string $name, string $columns)
+    public function getCreateIndexQuery(string $table, string $type, string $name, string $columns): string
     {
         return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
             $this->escapeId($name != "" ? $name : uniqid($table . "_")) .
@@ -54,7 +54,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getTruncateTableQuery(string $table)
+    public function getTruncateTableQuery(string $table): string
     {
         return "DELETE FROM " . $this->driver->escapeTableName($table);
     }
@@ -62,7 +62,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getCreateTriggerQuery(string $table)
+    public function getCreateTriggerQuery(string $table): string
     {
         $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " .
             $this->driver->quote($table);
@@ -72,7 +72,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function queryRegex()
+    public function queryRegex(): string
     {
         return '\\s*|[\'"`[]|/\*|-- |$';
     }
