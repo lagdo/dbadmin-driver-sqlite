@@ -14,7 +14,7 @@ class Query extends AbstractQuery
     /**
      * @inheritDoc
      */
-    protected function limitToOne(string $table, string $query, string $where, string $separator = "\n")
+    protected function limitToOne(string $table, string $query, string $where): string
     {
         return preg_match('~^INTO~', $query) ||
             $this->driver->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?

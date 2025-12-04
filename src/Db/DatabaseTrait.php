@@ -4,6 +4,8 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
 use Lagdo\DbAdmin\Driver\Entity\TableEntity;
 
+use function implode;
+
 trait DatabaseTrait
 {
     private function executeQueries(array $queries): bool

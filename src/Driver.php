@@ -79,7 +79,7 @@ class Driver extends AbstractDriver
     /**
      * @inheritDoc
      */
-    public function name()
+    public function name(): string
     {
         return "SQLite 3";
     }

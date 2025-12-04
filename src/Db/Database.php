@@ -5,10 +5,12 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 use Lagdo\DbAdmin\Driver\Entity\TableEntity;
 use Lagdo\DbAdmin\Driver\Db\Database as AbstractDatabase;
 
-use function is_object;
+use function array_filter;
+use function array_merge;
+use function array_reverse;
 use function intval;
 use function implode;
-use function array_reverse;
+use function is_object;
 
 class Database extends AbstractDatabase
 {
