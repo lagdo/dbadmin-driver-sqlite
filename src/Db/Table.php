@@ -2,22 +2,151 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
+use Lagdo\DbAdmin\Driver\Entity\IndexEntity;
 use Lagdo\DbAdmin\Driver\Entity\TableEntity;
+use Lagdo\DbAdmin\Driver\Entity\TableFieldEntity;
 use Lagdo\DbAdmin\Driver\Entity\TriggerEntity;
 use Lagdo\DbAdmin\Driver\Entity\ForeignKeyEntity;
 use Lagdo\DbAdmin\Driver\Db\Table as AbstractTable;
 
 use function array_combine;
+use function array_filter;
 use function implode;
 use function preg_match;
 use function preg_match_all;
+use function preg_quote;
 use function preg_replace;
 use function str_replace;
+use function strtolower;
 use function strtoupper;
+use function trim;
 
 class Table extends AbstractTable
 {
-    use TableTrait;
+    /**
+     * @param string $table
+     *
+     * @return array
+     */
+    private function queryStatus(string $table = ''): array
+    {
+        $query = "SELECT name AS Name, type AS Engine, 'rowid' AS Oid, '' AS Auto_increment " .
+            "FROM sqlite_master WHERE type IN ('table', 'view') " .
+            ($table != "" ? "AND name = " . $this->driver->quote($table) : "ORDER BY name");
+        return $this->driver->rows($query);
+    }
+
+    /**
+     * @param array $row
+     *
+     * @return TableEntity
+     */
+    private function makeStatus(array $row): TableEntity
+    {
+        $status = new TableEntity($row['Name']);
+        $status->engine = $row['Engine'];
+        $status->oid = $row['Oid'];
+        // $status->Auto_increment = $row['Auto_increment'];
+        $query = 'SELECT COUNT(*) FROM ' . $this->driver->escapeId($row['Name']);
+        $status->rows = $this->driver->result($query);
+
+        return $status;
+    }
+
+    /**
+     * @param array $row
+     * @param array $results
+     * @param string $table
+     *
+     * @return IndexEntity
+     */
+    private function makeIndexEntity(array $row, array $results, string $table): IndexEntity
+    {
+        $index = new IndexEntity();
+
+        $index->name = $row["name"];
+        $index->type = $row["unique"] ? "UNIQUE" : "INDEX";
+        $index->lengths = [];
+        $index->descs = [];
+        $columns = $this->driver->rows("PRAGMA index_info(" . $this->driver->escapeId($index->name) . ")");
+        foreach ($columns as $column) {
+            $index->columns[] = $column["name"];
+            $index->descs[] = null;
+        }
+        if (preg_match('~^CREATE( UNIQUE)? INDEX ' . preg_quote($this->driver->escapeId($index->name) . ' ON ' .
+                $this->driver->escapeId($table), '~') . ' \((.*)\)$~i', $results[$index->name] ?? '', $regs)) {
+            preg_match_all('/("[^"]*+")+( DESC)?/', $regs[2], $matches);
+            foreach ($matches[2] as $key => $val) {
+                if ($val) {
+                    $index->descs[$key] = '1';
+                }
+            }
+        }
+        return $index;
+    }
+
+    /**
+     * @param string $table
+     *
+     * @return IndexEntity|null
+     */
+    private function queryPrimaryIndex(string $table): ?IndexEntity
+    {
+        $primaryIndex = null;
+        $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->driver->quote($table);
+        $result = $this->driver->result($query);
+        if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
+            $primaryIndex = new IndexEntity();
+            $primaryIndex->type = "PRIMARY";
+            preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i',
+                $match[1], $matches, PREG_SET_ORDER);
+            foreach ($matches as $match) {
+                $primaryIndex->columns[] = $this->driver->unescapeId($match[2]) . $match[4];
+                $primaryIndex->descs[] = (preg_match('~DESC~i', $match[5]) ? '1' : null);
+            }
+        }
+        return $primaryIndex;
+    }
+
+    /**
+     * @param string $table
+     *
+     * @return IndexEntity|null
+     */
+    private function makePrimaryIndex(string $table): ?IndexEntity
+    {
+        $primaryIndex = $this->queryPrimaryIndex($table);
+        if ($primaryIndex !== null) {
+            return $primaryIndex;
+        }
+        $primaryFields = array_filter($this->fields($table), function($field) {
+            return $field->primary;
+        });
+        if (!$primaryFields) {
+            return null;
+        }
+        $primaryIndex = new IndexEntity();
+        $primaryIndex->type = "PRIMARY";
+        $primaryIndex->lengths = [];
+        $primaryIndex->descs = [null];
+        $primaryIndex->columns = [];
+        foreach ($primaryFields as $name => $field) {
+            $primaryIndex->columns[] = $name;
+        }
+        return $primaryIndex;
+    }
+
+    /**
+     * @param IndexEntity $index
+     * @param IndexEntity $primaryIndex
+     *
+     * @return bool
+     */
+    private function indexIsPrimary(IndexEntity $index, IndexEntity $primaryIndex): bool
+    {
+        return $index->type === 'UNIQUE' && $index->columns == $primaryIndex->columns &&
+            $index->descs == $primaryIndex->descs && preg_match("~^sqlite_~", $index->name);
+    }
 
     /**
      * @inheritDoc
@@ -36,22 +165,112 @@ class Table extends AbstractTable
     }
 
     /**
+     * @param string $type
+     *
+     * @return string
+     */
+    private function rowType(string $type): string
+    {
+        return match(true) {
+            preg_match('~int~i', $type) => 'integer',
+            preg_match('~char|clob|text~i', $type) => 'text',
+            preg_match('~blob~i', $type) => 'blob',
+            preg_match('~real|floa|doub~i', $type) => 'real',
+            default => 'numeric',
+        };
+    }
+
+    /**
+     * @param array $row
+     *
+     * @return mixed|null
+     */
+    private function defaultvalue(array $row)
+    {
+        $default = $row['dflt_value'];
+        return match(true) {
+            preg_match("~'(.*)'~", $default ?? '', $match) => str_replace("''", "'", $match[1]),
+            $default === 'NULL' => null,
+            default => $default,
+        };
+    }
+
+    /**
+     * @param array $row
+     *
+     * @return TableFieldEntity
+     */
+    private function makeFieldEntity(array $row): TableFieldEntity
+    {
+        $field = new TableFieldEntity();
+
+        $type = strtolower($row["type"]);
+        $field->name = $row["name"];
+        $field->type = $this->rowType($type);
+        $field->fullType = $type;
+        $field->default = $this->defaultvalue($row);
+        $field->null = !$row["notnull"];
+        $field->privileges = ["select" => 1, "insert" => 1, "update" => 1, "where" => 1, "order" => 1];
+        $field->primary = $row["pk"];
+        return $field;
+    }
+
+    /**
+     * @param string $table
+     *
+     * @return array
+     */
+    private function tableFields(string $table): array
+    {
+        $fields = [];
+        $infoTableName = 'table_' . ($this->driver->minVersion(3.31) ? 'x' : '') . 'info';
+        $tableName = $this->driver->escapeTableName($table);
+        $rows = $this->driver->rows("PRAGMA $infoTableName($tableName)");
+        $primary = '';
+        foreach ($rows as $row) {
+            $field = $this->makeFieldEntity($row);
+            if ($row['pk']) {
+                if ($primary != '') {
+                    $fields[$primary]->autoIncrement = false;
+                } elseif (preg_match('~^integer$~i', $field->fullType)) {
+                    $field->autoIncrement = true;
+                }
+                $primary = $field->name;
+            }
+
+            $fields[$field->name] = $field;
+        }
+
+        return $fields;
+    }
+
+    /**
      * @inheritDoc
      */
     public function fields(string $table): array
     {
         $fields = $this->tableFields($table);
-        $query = "SELECT sql FROM sqlite_master WHERE type IN ('table', 'view') AND name = " .
-            $this->driver->quote($table);
-        $result = $this->driver->result($query);
-        $pattern = '~(("[^"]*+")+|[a-z0-9_]+)\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i';
-        preg_match_all($pattern, $result, $matches, PREG_SET_ORDER);
+
+        $tableName = $this->driver->quote($table);
+        $sql = $this->driver->result("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName");
+        $idf = '(("[^"]*+")+|[a-z0-9_]+)';
+        $pattern = '~' . $idf . '\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i';
+        preg_match_all($pattern, $sql, $matches, PREG_SET_ORDER);
         foreach ($matches as $match) {
             $name = str_replace('""', '"', preg_replace('~^"|"$~', '', $match[1]));
             if (isset($fields[$name])) {
                 $fields[$name]->collation = trim($match[3], "'");
             }
         }
+
+        $pattern = '~' . $idf . '\s.*GENERATED ALWAYS AS \((.+)\) (STORED|VIRTUAL)~i';
+        preg_match_all($pattern, $sql, $matches, PREG_SET_ORDER);
+        foreach ($matches as $match) {
+            $name = str_replace('""', '"', preg_replace('~^"|"$~', '', $match[1]));
+            $fields[$name]->default = $match[3];
+            $fields[$name]->generated = strtoupper($match[4]);
+        }
+
         return $fields;
     }
 
@@ -201,12 +420,10 @@ class Table extends AbstractTable
      */
     public function tableHelp(string $name): string
     {
-        if ($name == "sqlite_sequence") {
-            return "fileformat2.html#seqtab";
-        }
-        if ($name == "sqlite_master") {
-            return "fileformat2.html#$name";
-        }
-        return '';
+        return match($name) {
+            "sqlite_sequence" => "fileformat2.html#seqtab",
+            "sqlite_master" => "fileformat2.html#$name",
+            default => '',
+        };
     }
 }
