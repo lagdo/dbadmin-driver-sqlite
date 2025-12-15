@@ -1,6 +1,6 @@
 <?php
 
-namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Traits;
 
 use Lagdo\DbAdmin\Driver\Db\StatementInterface;
 

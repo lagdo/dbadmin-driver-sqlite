@@ -1,9 +1,9 @@
 <?php
 
-use Lagdo\DbAdmin\Driver;
+use Lagdo\DbAdmin\Driver\AbstractDriver;
+use Lagdo\DbAdmin\Driver\DriverInterface;
+use Lagdo\DbAdmin\Driver\Sqlite\Driver;
+use Lagdo\DbAdmin\Driver\Utils\Utils;
 
-Driver\Driver::registerDriver('sqlite',
-    function($di, array $options): Driver\DriverInterface {
-        $utils = $di->g(Driver\Utils\Utils::class);
-        return new Driver\Sqlite\Driver($utils, $options);
-    });
+AbstractDriver::registerDriver('sqlite', fn($di, array $options): DriverInterface =>
+    new Driver($di->g(Utils::class), $options));

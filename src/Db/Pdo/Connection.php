@@ -2,11 +2,11 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Pdo;
 
-use Lagdo\DbAdmin\Driver\Db\Pdo\Connection as PdoConnection;
-use Lagdo\DbAdmin\Driver\Sqlite\Db\ConfigTrait;
-use Lagdo\DbAdmin\Driver\Sqlite\Db\ConnectionTrait;
+use Lagdo\DbAdmin\Driver\Db\Pdo\AbstractConnection;
+use Lagdo\DbAdmin\Driver\Sqlite\Db\Traits\ConfigTrait;
+use Lagdo\DbAdmin\Driver\Sqlite\Db\Traits\ConnectionTrait;
 
-class Connection extends PdoConnection
+class Connection extends AbstractConnection
 {
     use ConfigTrait;
     use ConnectionTrait;

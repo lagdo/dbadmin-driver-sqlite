@@ -4,7 +4,6 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Db\StatementInterface;
 use Lagdo\DbAdmin\Driver\Entity\StatementFieldEntity;
-
 use SQLite3Result;
 
 class Statement implements StatementInterface

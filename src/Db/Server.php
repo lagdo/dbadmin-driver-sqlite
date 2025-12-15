@@ -2,9 +2,10 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
-use Lagdo\DbAdmin\Driver\Exception\DbException;
-use Lagdo\DbAdmin\Driver\Db\Server as AbstractServer;
+use Lagdo\DbAdmin\Driver\Db\AbstractServer;
 use Lagdo\DbAdmin\Driver\Db\StatementInterface;
+use Lagdo\DbAdmin\Driver\Exception\DbException;
+use Lagdo\DbAdmin\Driver\Sqlite\Db\Traits\ConfigTrait;
 
 use DirectoryIterator;
 use Exception;

@@ -2,7 +2,7 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
-use Lagdo\DbAdmin\Driver\Db\Grammar as AbstractGrammar;
+use Lagdo\DbAdmin\Driver\Db\AbstractGrammar;
 
 class Grammar extends AbstractGrammar
 {

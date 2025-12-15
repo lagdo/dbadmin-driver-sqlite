@@ -2,7 +2,7 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
-use Lagdo\DbAdmin\Driver\Db\Query as AbstractQuery;
+use Lagdo\DbAdmin\Driver\Db\AbstractQuery;
 
 use function array_keys;
 use function implode;
