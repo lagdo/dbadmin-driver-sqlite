@@ -16,8 +16,11 @@ class Connection extends AbstractConnection
      */
     public function open(string $database, string $schema = ''): bool
     {
-        $filename = $this->filename($database, $this->options);
-        $this->dsn("sqlite:$filename", '', '');
+        $dsn = 'sqlite:' . $this->filename($database, $this->options);
+        if (!$this->dsn($dsn, '', '')) {
+            return false;
+        }
+
         $this->query('PRAGMA foreign_keys = 1');
         return true;
     }
