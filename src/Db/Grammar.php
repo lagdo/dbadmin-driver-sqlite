@@ -4,6 +4,12 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
 use Lagdo\DbAdmin\Driver\Db\AbstractGrammar;
 
+use function array_map;
+use function implode;
+use function preg_match;
+use function str_replace;
+use function uniqid;
+
 class Grammar extends AbstractGrammar
 {
     /**
@@ -20,6 +26,18 @@ class Grammar extends AbstractGrammar
     public function getAutoIncrementModifier(): string
     {
         return " PRIMARY KEY AUTOINCREMENT";
+    }
+
+    /**
+     * @inheritDoc
+     */
+    protected function limitToOne(string $table, string $query, string $where): string
+    {
+        return preg_match('~^INTO~', $query) ||
+            $this->driver->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
+            $this->getLimitClause($query, $where, 1, 0) :
+            //! use primary key in tables with WITHOUT rowid
+            " $query WHERE rowid = (SELECT rowid FROM " . $this->escapeTableName($table) . $where . ' LIMIT 1)';
     }
 
     /**

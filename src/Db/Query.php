@@ -6,23 +6,10 @@ use Lagdo\DbAdmin\Driver\Db\AbstractQuery;
 
 use function array_keys;
 use function implode;
-use function preg_match;
 use function preg_replace;
 
 class Query extends AbstractQuery
 {
-    /**
-     * @inheritDoc
-     */
-    protected function limitToOne(string $table, string $query, string $where): string
-    {
-        return preg_match('~^INTO~', $query) ||
-            $this->driver->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
-            $this->driver->getLimitClause($query, $where, 1, 0) :
-            //! use primary key in tables with WITHOUT rowid
-            " $query WHERE rowid = (SELECT rowid FROM " . $this->driver->escapeTableName($table) . $where . ' LIMIT 1)';
-    }
-
     /**
      * @inheritDoc
      */
