@@ -209,7 +209,7 @@ class Table extends AbstractTable
         $field->type = $this->rowType($type);
         $field->fullType = $type;
         $field->default = $this->defaultvalue($row);
-        $field->null = !$row["notnull"];
+        $field->nullable = !$row["notnull"];
         $field->privileges = ["select" => 1, "insert" => 1, "update" => 1, "where" => 1, "order" => 1];
         $field->primary = $row["pk"];
         return $field;
