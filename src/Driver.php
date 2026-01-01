@@ -6,6 +6,7 @@ use Lagdo\DbAdmin\Driver\AbstractDriver;
 use Lagdo\DbAdmin\Driver\Db\AbstractConnection;
 use Lagdo\DbAdmin\Driver\Exception\AuthException;
 
+use function array_keys;
 use function class_exists;
 use function extension_loaded;
 
@@ -92,11 +93,7 @@ class Driver extends AbstractDriver
         // Init config
         $this->config->jush = 'sqlite';
         $this->config->drivers = ["SQLite3", "PDO_SQLite"];
-        $this->config->setTypes([ //! arrays
-            'Numbers' => ["integer" => 0, "real" => 0, "numeric" => 0],
-            'Strings' => ["text" => 0],
-            'Binary' => ["blob" => 0],
-        ]);
+        $this->config->types = [["integer" => 0, "real" => 0, "numeric" => 0, "text" => 0, "blob" => 0]];
         // $this->config->unsigned = [];
         $this->config->operators = ["=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%",
             "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"]; // REGEXP can be user defined function;
@@ -149,5 +146,13 @@ class Driver extends AbstractDriver
             return new Db\Pdo\Connection($this, $this->utils, $options, 'PDO_SQLite');
         }
         throw new AuthException($this->utils->trans->lang('No package installed to open a Sqlite database.'));
+    }
+
+    /**
+     * @return array
+     */
+    public function structuredTypes(): array
+    {
+        return array_keys($this->config->types[0]);
     }
 }
