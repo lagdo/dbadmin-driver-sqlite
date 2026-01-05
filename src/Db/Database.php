@@ -124,7 +124,7 @@ class Database extends AbstractDatabase
         foreach (array_reverse($alter) as $index) {
             // Can't alter primary keys
             if ($index->type !== 'PRIMARY') {
-                $queries[] =  $this->driver->getCreateIndexQuery($table, $index->type,
+                $queries[] =  $this->driver->getIndexCreationQuery($table, $index->type,
                     $index->name, '(' . implode(', ', $index->columns) . ')');
             }
         }

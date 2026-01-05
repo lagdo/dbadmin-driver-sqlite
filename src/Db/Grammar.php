@@ -15,6 +15,14 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
+    public function getUseDatabaseQuery(string $database, string $style = ''): string
+    {
+        return '';
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function escapeId(string $idf): string
     {
         return '"' . str_replace('"', '""', $idf) . '"';
@@ -43,7 +51,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getCreateTableQuery(string $table, bool $autoIncrement, string $style): string
+    public function getTableDefinitionQueries(string $table, bool $autoIncrement, string $style): string
     {
         $query = $this->driver->result("SELECT sql FROM sqlite_master " .
             "WHERE type IN ('table', 'view') AND name = " . $this->driver->quote($table));
@@ -54,7 +62,7 @@ class Grammar extends AbstractGrammar
             $columns = implode(", ", array_map(function ($key) {
                 return $this->escapeId($key);
             }, $index->columns));
-            $query .= ";\n\n" . $this->getCreateIndexQuery($table, $index->type, $name, "($columns)");
+            $query .= ";\n\n" . $this->getIndexCreationQuery($table, $index->type, $name, "($columns)");
         }
         return $query;
     }
@@ -62,7 +70,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getCreateIndexQuery(string $table, string $type, string $name, string $columns): string
+    public function getIndexCreationQuery(string $table, string $type, string $name, string $columns): string
     {
         return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
             $this->escapeId($name != "" ? $name : uniqid($table . "_")) .
@@ -72,7 +80,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getTruncateTableQuery(string $table): string
+    public function getTableTruncationQuery(string $table): string
     {
         return "DELETE FROM " . $this->driver->escapeTableName($table);
     }
@@ -80,7 +88,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getCreateTriggerQuery(string $table): string
+    public function getTriggerCreationQuery(string $table): string
     {
         $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " .
             $this->driver->quote($table);
