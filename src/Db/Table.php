@@ -172,10 +172,10 @@ class Table extends AbstractTable
     private function rowType(string $type): string
     {
         return match(true) {
-            preg_match('~int~i', $type) => 'integer',
-            preg_match('~char|clob|text~i', $type) => 'text',
-            preg_match('~blob~i', $type) => 'blob',
-            preg_match('~real|floa|doub~i', $type) => 'real',
+            preg_match('~int~i', $type) > 0 => 'integer',
+            preg_match('~char|clob|text~i', $type) > 0 => 'text',
+            preg_match('~blob~i', $type) > 0 => 'blob',
+            preg_match('~real|floa|doub~i', $type) > 0 => 'real',
             default => 'numeric',
         };
     }
@@ -189,7 +189,8 @@ class Table extends AbstractTable
     {
         $default = $row['dflt_value'];
         return match(true) {
-            preg_match("~'(.*)'~", $default ?? '', $match) => str_replace("''", "'", $match[1]),
+            preg_match("~'(.*)'~", $default ?? '', $match) > 0 =>
+                str_replace("''", "'", $match[1]),
             $default === 'NULL' => null,
             default => $default,
         };
@@ -218,7 +219,7 @@ class Table extends AbstractTable
     /**
      * @param string $table
      *
-     * @return array
+     * @return array<TableFieldEntity>
      */
     private function tableFields(string $table): array
     {

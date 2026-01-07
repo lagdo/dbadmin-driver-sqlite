@@ -3,10 +3,7 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
 use Lagdo\DbAdmin\Driver\Db\AbstractDatabase;
-use Lagdo\DbAdmin\Driver\Entity\TableEntity;
 
-use function array_filter;
-use function array_merge;
 use function array_reverse;
 use function intval;
 use function implode;
@@ -76,45 +73,6 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function createTable(TableEntity $tableAttrs): bool
-    {
-        foreach ($tableAttrs->fields as $key => $field) {
-            $tableAttrs->fields[$key] = '  ' . implode($field);
-        }
-        $tableAttrs->fields = array_merge($tableAttrs->fields, array_filter($tableAttrs->foreign));
-        if (!$this->driver->execute('CREATE TABLE ' . $this->driver->escapeTableName($tableAttrs->name) .
-            " (\n" . implode(",\n", $tableAttrs->fields) . "\n)")) {
-            // implicit ROLLBACK to not overwrite $this->driver->error()
-            return false;
-        }
-        $this->setAutoIncrement($tableAttrs->name, $tableAttrs->autoIncrement);
-        return true;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function alterTable(string $table, TableEntity $tableAttrs): bool
-    {
-        $clauses = $this->getAlterTableClauses($tableAttrs);
-        $queries = [];
-        foreach ($clauses as $clause) {
-            $queries[] = 'ALTER TABLE ' . $this->driver->escapeTableName($table) . ' ' . $clause;
-        }
-        if ($table != $tableAttrs->name) {
-            $queries[] = 'ALTER TABLE ' . $this->driver->escapeTableName($table) . ' RENAME TO ' .
-                $this->driver->escapeTableName($tableAttrs->name);
-        }
-        if (!$this->executeQueries($queries)) {
-            return false;
-        }
-        $this->setAutoIncrement($tableAttrs->name, $tableAttrs->autoIncrement);
-        return true;
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function alterIndexes(string $table, array $alter, array $drop): bool
     {
         $queries = [];
@@ -148,42 +106,6 @@ class Database extends AbstractDatabase
     }
 
     /**
-     * @param string $table
-     * @param int $autoIncrement
-     *
-     * @return void
-     */
-    private function setAutoIncrement(string $table, int $autoIncrement)
-    {
-        if ($autoIncrement) {
-            $this->driver->execute('BEGIN');
-            $this->driver->execute("UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = " .
-                $this->driver->quote($table)); // ignores error
-            if (!$this->driver->affectedRows()) {
-                $this->driver->execute('INSERT INTO sqlite_sequence (name, seq) VALUES (' .
-                    $this->driver->quote($table) . ", $autoIncrement)");
-            }
-            $this->driver->execute('COMMIT');
-        }
-    }
-
-    /**
-     * @param TableEntity $tableAttrs
-     *
-     * @return array
-     */
-    private function getAlterTableClauses(TableEntity $tableAttrs): array
-    {
-        $clauses = [];
-        foreach ($tableAttrs->fields as $field) {
-            if ($field[1]) {
-                $clauses[] = ($field[0] != ''  ? $field[1] : 'ADD ' . implode($field[1]));
-            }
-        }
-        return $clauses;
-    }
-
-    /**
      * Recreate a table
      *
      * @param TableEntity $tableAttrs
@@ -210,7 +132,7 @@ class Database extends AbstractDatabase
                     if (!empty($tableAttrs->indexes)) {
                         $field->autoIncrement = 0;
                     }
-                    $tableAttrs->fields[] = $this->driver->processField($field, $field);
+                    $tableAttrs->fields[] = $this->driver->getFieldClauses($field, $field);
                     $originals[$key] = $this->driver->escapeId($key);
                 }
             }
