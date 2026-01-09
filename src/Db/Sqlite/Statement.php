@@ -3,7 +3,7 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Db\StatementInterface;
-use Lagdo\DbAdmin\Driver\Entity\StatementFieldEntity;
+use Lagdo\DbAdmin\Driver\Dto\StatementFieldDto;
 use SQLite3Result;
 
 class Statement implements StatementInterface
@@ -66,12 +66,12 @@ class Statement implements StatementInterface
     /**
      * @inheritDoc
      */
-    public function fetchField(): StatementFieldEntity|null
+    public function fetchField(): StatementFieldDto|null
     {
         $column = $this->offset++;
         $type = $this->result->columnType($column);
         $name = $this->result->columnName($column);
-        return new StatementFieldEntity($type, $type === SQLITE3_BLOB, $name, $name);
+        return new StatementFieldDto($type, $type === SQLITE3_BLOB, $name, $name);
     }
 
     /**

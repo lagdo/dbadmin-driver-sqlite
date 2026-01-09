@@ -108,12 +108,12 @@ class Database extends AbstractDatabase
     /**
      * Recreate a table
      *
-     * @param TableEntity $tableAttrs
+     * @param TableDto $tableAttrs
      * @param string $table
      *
      * @return bool
      */
-    /*private function recreateTable(TableEntity $tableAttrs, string $table = '')
+    /*private function recreateTable(TableDto $tableAttrs, string $table = '')
     {
         $alter = [];
         $originals = [];

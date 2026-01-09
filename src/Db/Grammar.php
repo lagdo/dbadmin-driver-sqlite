@@ -3,9 +3,9 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
 
 use Lagdo\DbAdmin\Driver\Db\AbstractGrammar;
-use Lagdo\DbAdmin\Driver\Entity\ColumnEntity;
-use Lagdo\DbAdmin\Driver\Entity\TableAlterEntity;
-use Lagdo\DbAdmin\Driver\Entity\TableCreateEntity;
+use Lagdo\DbAdmin\Driver\Dto\ColumnDto;
+use Lagdo\DbAdmin\Driver\Dto\TableAlterDto;
+use Lagdo\DbAdmin\Driver\Dto\TableCreateDto;
 
 use function array_map;
 use function count;
@@ -69,11 +69,11 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getTableCreationQueries(TableCreateEntity $table): array
+    public function getTableCreationQueries(TableCreateDto $table): array
     {
         // $useAllFields = true;
 
-        $columns = array_map(fn(ColumnEntity $column) => $column->clause(), $table->columns);
+        $columns = array_map(fn(ColumnDto $column) => $column->clause(), $table->columns);
         $columns = [
             ...$columns,
             ...$this->getForeignKeyClauses($table),
@@ -92,7 +92,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getTableAlterationQueries(TableAlterEntity $table): array
+    public function getTableAlterationQueries(TableAlterDto $table): array
     {
         // $useAllFields = count($table->foreignKeys) > 0 || count($table->changedColumns) > 0;
         // if (!$useAllFields) {
