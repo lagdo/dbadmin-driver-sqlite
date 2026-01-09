@@ -187,10 +187,11 @@ class Table extends AbstractTable
      */
     private function defaultvalue(array $row)
     {
-        $default = $row['dflt_value'];
+        $default = $row['dflt_value'] ?? null;
         return match(true) {
             preg_match("~'(.*)'~", $default ?? '', $match) > 0 =>
                 str_replace("''", "'", $match[1]),
+            $default === null,
             $default === 'NULL' => null,
             default => $default,
         };
