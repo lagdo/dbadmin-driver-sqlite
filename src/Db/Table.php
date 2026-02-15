@@ -308,13 +308,14 @@ class Table extends AbstractTable
         $foreignKeys = [];
         $query = 'PRAGMA foreign_key_list(' . $this->driver->escapeTableName($table) . ')';
         foreach ($this->driver->rows($query) as $row) {
-            $name = $row["id"];
+            $name = $row['id'];
             if (!isset($foreignKeys[$name])) {
                 $foreignKeys[$name] = new ForeignKeyDto();
             }
             //! idf_unescape in SQLite2
-            $foreignKeys[$name]->source[] = $row["from"];
-            $foreignKeys[$name]->target[] = $row["to"];
+            $foreignKeys[$name]->table = $row['table'] ?? '';
+            $foreignKeys[$name]->source[] = $row['from'];
+            $foreignKeys[$name]->target[] = $row['to'];
         }
         return $foreignKeys;
     }
