@@ -1,12 +1,12 @@
 <?php
 
-namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Sqlite;
+namespace Lagdo\DbAdmin\Support\Sqlite\Connection\Sqlite;
 
-use Lagdo\DbAdmin\Driver\Db\AbstractConnection;
-use Lagdo\DbAdmin\Driver\Db\PreparedStatement;
-use Lagdo\DbAdmin\Driver\Db\StatementInterface;
-use Lagdo\DbAdmin\Driver\Sqlite\Db\Traits\ConfigTrait;
-use Lagdo\DbAdmin\Driver\Sqlite\Db\Traits\ConnectionTrait;
+use Lagdo\DbAdmin\Support\Db\Engine\Connection\PreparedStatement;
+use Lagdo\DbAdmin\Support\Db\Engine\Connection\StatementInterface;
+use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractConnection;
+use Lagdo\DbAdmin\Support\Sqlite\Connection\Traits\ConfigTrait;
+use Lagdo\DbAdmin\Support\Sqlite\Connection\Traits\ConnectionTrait;
 use Exception;
 use SQLite3;
 

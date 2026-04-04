@@ -1,13 +1,13 @@
 <?php
 
-namespace Lagdo\DbAdmin\Driver\Sqlite\Tests;
+namespace Lagdo\DbAdmin\Support\Sqlite\Tests;
 
-use Lagdo\DbAdmin\Driver\Utils\Str;
-use Lagdo\DbAdmin\Driver\Utils\Utils;
-use Lagdo\DbAdmin\Driver\Utils\Input;
-use Lagdo\DbAdmin\Driver\Fake\DriverTrait;
-use Lagdo\DbAdmin\Driver\Fake\Translator;
-use Lagdo\DbAdmin\Driver\Sqlite\Driver as SqliteDriver;
+use Lagdo\DbAdmin\Support\Utils\Str;
+use Lagdo\DbAdmin\Support\Utils\Utils;
+use Lagdo\DbAdmin\Support\Utils\Input;
+use Lagdo\DbAdmin\Support\Db\Fake\DriverTrait;
+use Lagdo\DbAdmin\Support\Db\Fake\Translator;
+use Lagdo\DbAdmin\Support\Sqlite\Driver as SqliteDriver;
 
 class Driver extends SqliteDriver
 {

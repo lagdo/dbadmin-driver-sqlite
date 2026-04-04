@@ -1,9 +1,9 @@
 <?php
 
-namespace Lagdo\DbAdmin\Driver\Sqlite\Db\Sqlite;
+namespace Lagdo\DbAdmin\Support\Sqlite\Connection\Sqlite;
 
-use Lagdo\DbAdmin\Driver\Db\StatementInterface;
-use Lagdo\DbAdmin\Driver\Dto\StatementFieldDto;
+use Lagdo\DbAdmin\Support\Db\Engine\Connection\StatementInterface;
+use Lagdo\DbAdmin\Support\Dto\StatementFieldDto;
 use SQLite3Result;
 
 class Statement implements StatementInterface

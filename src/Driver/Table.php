@@ -1,13 +1,13 @@
 <?php
 
-namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
+namespace Lagdo\DbAdmin\Support\Sqlite\Driver;
 
-use Lagdo\DbAdmin\Driver\Db\AbstractTable;
-use Lagdo\DbAdmin\Driver\Dto\ForeignKeyDto;
-use Lagdo\DbAdmin\Driver\Dto\IndexDto;
-use Lagdo\DbAdmin\Driver\Dto\TableDto;
-use Lagdo\DbAdmin\Driver\Dto\TableFieldDto;
-use Lagdo\DbAdmin\Driver\Dto\TriggerDto;
+use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractTable;
+use Lagdo\DbAdmin\Support\Dto\ForeignKeyDto;
+use Lagdo\DbAdmin\Support\Dto\IndexDto;
+use Lagdo\DbAdmin\Support\Dto\TableDto;
+use Lagdo\DbAdmin\Support\Dto\TableFieldDto;
+use Lagdo\DbAdmin\Support\Dto\TriggerDto;
 
 use function array_combine;
 use function array_filter;
@@ -47,7 +47,7 @@ class Table extends AbstractTable
         $status->engine = $row['Engine'];
         $status->oid = $row['Oid'];
         // $status->Auto_increment = $row['Auto_increment'];
-        $query = 'SELECT COUNT(*) FROM ' . $this->driver->escapeId($row['Name']);
+        $query = 'SELECT COUNT(*) FROM ' . $this->grammar->escapeId($row['Name']);
         $status->rows = $this->driver->result($query);
 
         return $status;
@@ -68,13 +68,13 @@ class Table extends AbstractTable
         $index->type = $row["unique"] ? "UNIQUE" : "INDEX";
         $index->lengths = [];
         $index->descs = [];
-        $columns = $this->driver->rows("PRAGMA index_info(" . $this->driver->escapeId($index->name) . ")");
+        $columns = $this->driver->rows("PRAGMA index_info(" . $this->grammar->escapeId($index->name) . ")");
         foreach ($columns as $column) {
             $index->columns[] = $column["name"];
             $index->descs[] = null;
         }
-        if (preg_match('~^CREATE( UNIQUE)? INDEX ' . preg_quote($this->driver->escapeId($index->name) . ' ON ' .
-                $this->driver->escapeId($table), '~') . ' \((.*)\)$~i', $results[$index->name] ?? '', $regs)) {
+        if (preg_match('~^CREATE( UNIQUE)? INDEX ' . preg_quote($this->grammar->escapeId($index->name) . ' ON ' .
+                $this->grammar->escapeId($table), '~') . ' \((.*)\)$~i', $results[$index->name] ?? '', $regs)) {
             preg_match_all('/("[^"]*+")+( DESC)?/', $regs[2], $matches);
             foreach ($matches[2] as $key => $val) {
                 if ($val) {
@@ -101,7 +101,7 @@ class Table extends AbstractTable
             preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i',
                 $match[1], $matches, PREG_SET_ORDER);
             foreach ($matches as $match) {
-                $primaryIndex->columns[] = $this->driver->unescapeId($match[2]) . $match[4];
+                $primaryIndex->columns[] = $this->grammar->unescapeId($match[2]) . $match[4];
                 $primaryIndex->descs[] = (preg_match('~DESC~i', $match[5]) ? '1' : null);
             }
         }
@@ -226,7 +226,7 @@ class Table extends AbstractTable
     {
         $fields = [];
         $infoTableName = 'table_' . ($this->driver->minVersion(3.31) ? 'x' : '') . 'info';
-        $tableName = $this->driver->escapeTableName($table);
+        $tableName = $this->grammar->escapeTableName($table);
         $rows = $this->driver->rows("PRAGMA $infoTableName($tableName)");
         $primary = '';
         foreach ($rows as $row) {
@@ -289,7 +289,7 @@ class Table extends AbstractTable
         $indexes = ['' => $primaryIndex];
         $query = "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = " . $this->driver->quote($table);
         $results = $this->driver->keyValues($query);
-        $rows = $this->driver->rows("PRAGMA index_list(" . $this->driver->escapeTableName($table) . ")");
+        $rows = $this->driver->rows("PRAGMA index_list(" . $this->grammar->escapeTableName($table) . ")");
         foreach ($rows as $row) {
             $index = $this->makeIndexDto($row, $results, $table);
             if ($this->indexIsPrimary($index, $primaryIndex)) {
@@ -306,7 +306,7 @@ class Table extends AbstractTable
     public function foreignKeys(string $table): array
     {
         $foreignKeys = [];
-        $query = 'PRAGMA foreign_key_list(' . $this->driver->escapeTableName($table) . ')';
+        $query = 'PRAGMA foreign_key_list(' . $this->grammar->escapeTableName($table) . ')';
         foreach ($this->driver->rows($query) as $row) {
             $name = $row['id'];
             if (!isset($foreignKeys[$name])) {
@@ -399,7 +399,7 @@ class Table extends AbstractTable
                 $this->driver->quote($name)), $match);
         $of = $match[3];
         return new TriggerDto(strtoupper($match[1]), strtoupper($match[2]), $match[4],
-            ($of[0] == '`' || $of[0] == '"' ? $this->driver->unescapeId($of) : $of), $name);
+            ($of[0] == '`' || $of[0] == '"' ? $this->grammar->unescapeId($of) : $of), $name);
     }
 
     /**

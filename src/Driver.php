@@ -1,10 +1,10 @@
 <?php
 
-namespace Lagdo\DbAdmin\Driver\Sqlite;
+namespace Lagdo\DbAdmin\Support\Sqlite;
 
-use Lagdo\DbAdmin\Driver\AbstractDriver;
-use Lagdo\DbAdmin\Driver\Db\AbstractConnection;
-use Lagdo\DbAdmin\Driver\Exception\AuthException;
+use Lagdo\DbAdmin\Support\AbstractDriver;
+use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractConnection;
+use Lagdo\DbAdmin\Support\Exception\AuthException;
 
 use function array_keys;
 use function class_exists;
@@ -13,68 +13,68 @@ use function extension_loaded;
 class Driver extends AbstractDriver
 {
     /**
-     * @var Db\Server|null
+     * @var Grammar|null;
      */
-    private Db\Server|null $server = null;
+    private Grammar|null $grammar = null;
 
     /**
-     * @var Db\Database|null
+     * @var Driver\Server|null
      */
-    private Db\Database|null $database = null;
+    private Driver\Server|null $server = null;
 
     /**
-     * @var Db\Table|null
+     * @var Driver\Database|null
      */
-    private Db\Table|null $table = null;
+    private Driver\Database|null $database = null;
 
     /**
-     * @var Db\Query|null
+     * @var Driver\Table|null
      */
-    private Db\Query|null $query = null;
+    private Driver\Table|null $table = null;
 
     /**
-     * @var Db\Grammar|null
+     * @var Driver\Query|null
      */
-    private Db\Grammar|null $grammar = null;
+    private Driver\Query|null $query = null;
 
     /**
-     * @return Db\Server
+     * @return Grammar
      */
-    protected function _server(): Db\Server
+    public function grammar(): Grammar
     {
-        return $this->server ?: $this->server = new Db\Server($this, $this->utils);
+        return $this->grammar ??= new Grammar($this, $this->utils);
     }
 
     /**
-     * @return Db\Database
+     * @return Driver\Server
      */
-    protected function _database(): Db\Database
+    protected function _server(): Driver\Server
     {
-        return $this->database ?: $this->database = new Db\Database($this, $this->utils);
+        return $this->server ??= new Driver\Server($this, $this->grammar(), $this->utils);
     }
 
     /**
-     * @return Db\Table
+     * @return Driver\Database
      */
-    protected function _table(): Db\Table
+    protected function _database(): Driver\Database
     {
-        return $this->table ?: $this->table = new Db\Table($this, $this->utils);
+        return $this->database ??= new Driver\Database($this, $this->grammar(), $this->utils);
     }
 
     /**
-     * @return Db\Grammar
+     * @return Driver\Table
      */
-    protected function _grammar(): Db\Grammar
+    protected function _table(): Driver\Table
     {
-        return $this->grammar ?: $this->grammar = new Db\Grammar($this, $this->utils);
+        return $this->table ??= new Driver\Table($this, $this->grammar(), $this->utils);
     }
 
     /**
-     * @return Db\Query
+     * @return Driver\Query
      */
-    protected function _query(): Db\Query
+    protected function _query(): Driver\Query
     {
-        return $this->query ?: $this->query = new Db\Query($this, $this->utils);
+        return $this->query ??= new Driver\Query($this, $this->grammar(), $this->utils);
     }
 
     /**
@@ -140,12 +140,15 @@ class Driver extends AbstractDriver
     {
         $preferPdo = $options['prefer_pdo'] ?? false;
         if (!$preferPdo && class_exists("SQLite3")) {
-            return new Db\Sqlite\Connection($this, $this->utils, $options, 'SQLite3');
+            return new Connection\Sqlite\Connection($this,
+                $this->grammar(), $this->utils, $options, 'SQLite3');
         }
         if (extension_loaded("pdo_sqlite")) {
-            return new Db\Pdo\Connection($this, $this->utils, $options, 'PDO_SQLite');
+            return new Connection\Pdo\Connection($this,
+                $this->grammar(), $this->utils, $options, 'PDO_SQLite');
         }
-        throw new AuthException($this->utils->trans->lang('No package installed to open a Sqlite database.'));
+        throw new AuthException($this->utils->trans
+            ->lang('No package installed to open a Sqlite database.'));
     }
 
     /**

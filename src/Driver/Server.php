@@ -1,12 +1,11 @@
 <?php
 
-namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
+namespace Lagdo\DbAdmin\Support\Sqlite\Driver;
 
-use Lagdo\DbAdmin\Driver\Db\AbstractServer;
-use Lagdo\DbAdmin\Driver\Db\StatementInterface;
-use Lagdo\DbAdmin\Driver\Exception\DbException;
-use Lagdo\DbAdmin\Driver\Sqlite\Db\Traits\ConfigTrait;
-
+use Lagdo\DbAdmin\Support\Db\Engine\Connection\StatementInterface;
+use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractServer;
+use Lagdo\DbAdmin\Support\Exception\DbException;
+use Lagdo\DbAdmin\Support\Sqlite\Connection\Traits\ConfigTrait;
 use DirectoryIterator;
 use Exception;
 
@@ -160,20 +159,6 @@ class Server extends AbstractServer
             throw new DbException($this->utils->trans->lang('File exists.'));
         }
         return true;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function renameDatabase(string $database, string $collation): bool
-    {
-        $options = $this->driver->options();
-        $filename = $this->filename($database, $options);
-        if (!$this->validateName($filename)) {
-            throw new DbException($this->utils->trans->lang('Please use one of the extensions %s.',
-                str_replace("|", ", ", $this->extensions)));
-        }
-        return @rename($this->filename($this->driver->database(), $options), $filename);
     }
 
     /**

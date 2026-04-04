@@ -1,57 +1,19 @@
 <?php
 
-namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
+namespace Lagdo\DbAdmin\Support\Sqlite\Grammar;
 
-use Lagdo\DbAdmin\Driver\Db\AbstractGrammar;
-use Lagdo\DbAdmin\Driver\Dto\ColumnDto;
-use Lagdo\DbAdmin\Driver\Dto\TableAlterDto;
-use Lagdo\DbAdmin\Driver\Dto\TableCreateDto;
+use Lagdo\DbAdmin\Support\Db\Engine\Grammar\AbstractTable;
+use Lagdo\DbAdmin\Support\Dto\ColumnDto;
+use Lagdo\DbAdmin\Support\Dto\TableAlterDto;
+use Lagdo\DbAdmin\Support\Dto\TableCreateDto;
 
 use function array_map;
-use function count;
+use function array_reverse;
 use function implode;
-use function preg_match;
-use function str_replace;
 use function uniqid;
 
-class Grammar extends AbstractGrammar
+class Table extends AbstractTable
 {
-    /**
-     * @inheritDoc
-     */
-    public function getUseDatabaseQuery(string $database, string $style = ''): string
-    {
-        return '';
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function escapeId(string $idf): string
-    {
-        return '"' . str_replace('"', '""', $idf) . '"';
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function getAutoIncrementModifier(): string
-    {
-        return " PRIMARY KEY AUTOINCREMENT";
-    }
-
-    /**
-     * @inheritDoc
-     */
-    protected function limitToOne(string $table, string $query, string $where): string
-    {
-        return preg_match('~^INTO~', $query) ||
-            $this->driver->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
-            $this->getLimitClause($query, $where, 1, 0) :
-            //! use primary key in tables with WITHOUT rowid
-            " $query WHERE rowid = (SELECT rowid FROM " . $this->escapeTableName($table) . $where . ' LIMIT 1)';
-    }
-
     /**
      * @param string $table
      * @param int $autoIncrement
@@ -69,7 +31,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getTableCreationQueries(TableCreateDto $table): array
+    public function getCreateTableQueries(TableCreateDto $table): array
     {
         // $useAllFields = true;
 
@@ -82,7 +44,7 @@ class Grammar extends AbstractGrammar
         $autoIncrementQueries = $table->autoIncrement <= 0 ? [] :
             $this->getAutoIncrementQueries($quotedTableName, $table->autoIncrement);
 
-        $tableName = $this->driver->escapeTableName($table->name);
+        $tableName = $this->grammar->escapeTableName($table->name);
         return [
             "CREATE TABLE $tableName (\n" . implode(",\n", $columns) . "\n)",
             ...$autoIncrementQueries,
@@ -92,7 +54,7 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getTableAlterationQueries(TableAlterDto $table): array
+    public function getAlterTableQueries(TableAlterDto $table): array
     {
         // $useAllFields = count($table->foreignKeys) > 0 || count($table->changedColumns) > 0;
         // if (!$useAllFields) {
@@ -103,24 +65,24 @@ class Grammar extends AbstractGrammar
         //     }
         // }
 
-        $tableName = $this->driver->escapeTableName($table->name);
+        $tableName = $this->grammar->escapeTableName($table->name);
         $queries = [];
         foreach ($table->addedColumns as $column) {
             $queries[] = "ALTER TABLE $tableName ADD " . $column->clause();
         }
         foreach ($table->changedColumns as $fieldName => $column) {
             if ($fieldName !== $column->field->name) {
-                $fieldName = $this->escapeId($fieldName);
+                $fieldName = $this->grammar->escapeId($fieldName);
                 $queries[] = "ALTER TABLE $tableName RENAME $fieldName TO {$column->name}";
             }
             // SQLite doesn't directly support other changes on a table structure.
             // $queries[] = "ALTER TABLE $tableName " . $column->clause();
         }
         foreach ($table->droppedColumns as $fieldName) {
-            $queries[] = "ALTER TABLE $tableName DROP " . $this->escapeId($fieldName);
+            $queries[] = "ALTER TABLE $tableName DROP " . $this->grammar->escapeId($fieldName);
         }
         if ($table->name !== $table->current->name) {
-            $currTableName = $this->driver->escapeTableName($table->current->name);
+            $currTableName = $this->grammar->escapeTableName($table->current->name);
             $queries[] = "ALTER TABLE $currTableName RENAME TO $tableName";
         }
 
@@ -146,9 +108,9 @@ class Grammar extends AbstractGrammar
                 continue;
             }
             $columns = implode(", ", array_map(function ($key) {
-                return $this->escapeId($key);
+                return $this->grammar->escapeId($key);
             }, $index->columns));
-            $query .= ";\n\n" . $this->getIndexCreationQuery($table, $index->type, $name, "($columns)");
+            $query .= ";\n\n" . $this->getCreateIndexQuery($table, $index->type, $name, "($columns)");
         }
         return $query;
     }
@@ -156,28 +118,47 @@ class Grammar extends AbstractGrammar
     /**
      * @inheritDoc
      */
-    public function getIndexCreationQuery(string $table, string $type, string $name, string $columns): string
+    public function getCreateIndexQuery(string $table, string $type, string $name, string $columns): string
     {
         return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
-            $this->escapeId($name != "" ? $name : uniqid($table . "_")) .
-            " ON " . $this->driver->escapeTableName($table) . " $columns";
+            $this->grammar->escapeId($name != "" ? $name : uniqid($table . "_")) .
+            " ON " . $this->grammar->escapeTableName($table) . " $columns";
     }
 
     /**
      * @inheritDoc
      */
-    public function getTableTruncationQuery(string $table): string
+    public function getTruncateTableQuery(string $table): string
     {
-        return "DELETE FROM " . $this->driver->escapeTableName($table);
+        return "DELETE FROM " . $this->grammar->escapeTableName($table);
     }
 
     /**
      * @inheritDoc
      */
-    public function getTriggerCreationQuery(string $table): string
+    public function getCreateTriggerQuery(string $table): string
     {
         $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " .
             $this->driver->quote($table);
         return implode($this->driver->values($query));
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getAlterIndexQueries(string $table, array $alter, array $drop): array
+    {
+        $queries = [];
+        foreach (array_reverse($drop) as $index) {
+            $queries[] = 'DROP INDEX ' . $this->grammar->escapeId($index->name);
+        }
+        foreach (array_reverse($alter) as $index) {
+            // Can't alter primary keys
+            if ($index->type !== 'PRIMARY') {
+                $queries[] =  $this->grammar->getCreateIndexQuery($table, $index->type,
+                    $index->name, '(' . implode(', ', $index->columns) . ')');
+            }
+        }
+        return $queries;
     }
 }

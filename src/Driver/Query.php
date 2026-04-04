@@ -1,8 +1,8 @@
 <?php
 
-namespace Lagdo\DbAdmin\Driver\Sqlite\Db;
+namespace Lagdo\DbAdmin\Support\Sqlite\Driver;
 
-use Lagdo\DbAdmin\Driver\Db\AbstractQuery;
+use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractQuery;
 
 use function array_keys;
 use function implode;
@@ -13,18 +13,18 @@ class Query extends AbstractQuery
     /**
      * @inheritDoc
      */
-    public function insertOrUpdate(string $table, array $rows, array $primary): bool
-    {
-        $values = [];
-        foreach ($rows as $set) {
-            $values[] = "(" . implode(", ", $set) . ")";
-        }
-        $result = $this->driver->execute("REPLACE INTO " .
-            $this->driver->escapeTableName($table) . " (" .
-            implode(", ", array_keys(reset($rows))) .
-            ") VALUES\n" . implode(",\n", $values));
-        return $result !== false;
-    }
+    // public function insertOrUpdate(string $table, array $rows, array $primary): bool
+    // {
+    //     $values = [];
+    //     foreach ($rows as $set) {
+    //         $values[] = "(" . implode(", ", $set) . ")";
+    //     }
+    //     $result = $this->driver->execute("REPLACE INTO " .
+    //         $this->grammar->escapeTableName($table) . " (" .
+    //         implode(", ", array_keys(reset($rows))) .
+    //         ") VALUES\n" . implode(",\n", $values));
+    //     return $result !== false;
+    // }
 
     /**
      * @inheritDoc
