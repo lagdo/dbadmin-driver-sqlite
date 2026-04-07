@@ -99,7 +99,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    public function getTableDefinitionQueries(string $table, bool $autoIncrement, string $style): string
+    public function getExportTableQueries(string $table, bool $autoIncrement, string $style): string
     {
         $query = $this->driver->result("SELECT sql FROM sqlite_master " .
             "WHERE type IN ('table', 'view') AND name = " . $this->driver->quote($table));

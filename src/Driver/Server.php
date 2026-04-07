@@ -15,7 +15,6 @@ use function get_current_user;
 use function intval;
 use function is_a;
 use function preg_match;
-use function rename;
 use function str_replace;
 use function unlink;
 
