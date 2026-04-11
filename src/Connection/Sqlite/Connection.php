@@ -2,9 +2,9 @@
 
 namespace Lagdo\DbAdmin\Support\Sqlite\Connection\Sqlite;
 
+use Lagdo\DbAdmin\Support\Db\Engine\Connection\AbstractConnection;
 use Lagdo\DbAdmin\Support\Db\Engine\Connection\PreparedStatement;
 use Lagdo\DbAdmin\Support\Db\Engine\Connection\StatementInterface;
-use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractConnection;
 use Lagdo\DbAdmin\Support\Sqlite\Connection\Traits\ConfigTrait;
 use Lagdo\DbAdmin\Support\Sqlite\Connection\Traits\ConnectionTrait;
 use Exception;

@@ -2,33 +2,19 @@
 
 namespace Lagdo\DbAdmin\Support\Sqlite\Driver;
 
-use Lagdo\DbAdmin\Support\Db\Engine\Connection\StatementInterface;
 use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractServer;
-use Lagdo\DbAdmin\Support\Exception\DbException;
-use Lagdo\DbAdmin\Support\Sqlite\Connection\Traits\ConfigTrait;
-use DirectoryIterator;
-use Exception;
+use Lagdo\DbAdmin\Support\Db\Engine\Connection\AbstractConnection;
+use Lagdo\DbAdmin\Support\Exception\AuthException;
+use Lagdo\DbAdmin\Support\Sqlite\Connection;
 
+use function class_exists;
 use function count;
 use function explode;
+use function extension_loaded;
 use function get_current_user;
-use function intval;
-use function is_a;
-use function preg_match;
-use function str_replace;
-use function unlink;
 
 class Server extends AbstractServer
 {
-    use ConfigTrait;
-
-    /**
-     * The database file extensions
-     *
-     * @var string
-     */
-    protected $extensions = "db|sdb|sqlite";
-
     /**
      * @var array
      */
@@ -42,63 +28,68 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
+    protected function starting(): void
+    {
+        // Init config
+        $this->config->jush = 'sqlite';
+        $this->config->drivers = ["SQLite3", "PDO_SQLite"];
+        $this->config->types = [["integer" => 0, "real" => 0, "numeric" => 0, "text" => 0, "blob" => 0]];
+        // $this->config->unsigned = [];
+        $this->config->operators = ["=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%",
+            "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"]; // REGEXP can be user defined function;
+        $this->config->functions = ["hex", "length", "lower", "round", "unixepoch", "upper"];
+        $this->config->grouping = ["avg", "count", "count distinct", "group_concat", "max", "min", "sum"];
+        $this->config->insertFunctions = [
+            // "text" => ["date('now')", "time('now')", "datetime('now')"],
+        ];
+        $this->config->editFunctions = [
+            "integer|real|numeric" => ["+", "-"],
+            // "text" => ["date", "time", "datetime"],
+            "text" => ["||"],
+        ];
+        $this->config->features = ['columns', 'database', 'drop_col', 'dump', 'indexes', 'descidx',
+            'move_col', 'sql', 'status', 'table', 'trigger', 'variables', 'view', 'view_trigger'];
+
+        // Regex to parse SQL statements in a text
+        $this->config->sqlStatementRegex = '\\s*|[\'"`[]|/\*|-- |$';
+    }
+
+    /**
+     * @inheritDoc
+     */
+    protected function connected(): void
+    {
+        if ($this->driver->minVersion(3.31, 0)) {
+            $this->config->generated = ["STORED", "VIRTUAL"];
+        }
+    }
+
+    /**
+     * @inheritDoc
+     * @throws AuthException
+     */
+    public function createConnection(array $options): AbstractConnection|null
+    {
+        $preferPdo = $options['prefer_pdo'] ?? false;
+        if (!$preferPdo && class_exists("SQLite3")) {
+            return new Connection\Sqlite\Connection($this->driver,
+                $this->grammar, $this->utils, $options, 'SQLite3');
+        }
+        if (extension_loaded("pdo_sqlite")) {
+            return new Connection\Pdo\Connection($this->driver,
+                $this->grammar, $this->utils, $options, 'PDO_SQLite');
+        }
+
+        throw new AuthException($this->utils->trans
+            ->lang('No package installed to open a Sqlite database.'));
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function user(): string
     {
         return get_current_user(); // should return effective user
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function databases(bool $flush): array
-    {
-        $databases = [];
-        $directory = $this->directory($this->driver->options());
-        $iterator = new DirectoryIterator($directory);
-        // Iterate on dir content
-        foreach($iterator as $file)
-        {
-            // Skip everything except Sqlite files
-            if(!$file->isFile() || !$this->validateName($filename = $file->getFilename()))
-            {
-                continue;
-            }
-            $databases[] = $filename;
-        }
-        return $databases;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function databaseSize(string $database): int
-    {
-        $connection = $this->driver->newConnection($database); // New connection
-        if (!$connection) {
-            return 0;
-        }
-        $pageSize = 0;
-        $statement = $connection->query('pragma page_size');
-        if (is_a($statement, StatementInterface::class) &&
-            ($row = $statement->fetchRow())) {
-            $pageSize = intval($row[0]);
-        }
-        $pageCount = 0;
-        $statement = $connection->query('pragma page_count');
-        if (is_a($statement, StatementInterface::class) &&
-            ($row = $statement->fetchRow())) {
-            $pageCount = intval($row[0]);
-        }
-        return $pageSize * $pageCount;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function databaseCollation(string $database, array $collations): string
-    {
-        // there is no database list so $database == $this->driver->database()
-        return $this->driver->result("PRAGMA encoding");
     }
 
     /**
@@ -108,56 +99,6 @@ class Server extends AbstractServer
     {
         return $this->utils->input->hasTable() ?
             $this->driver->values("PRAGMA collation_list", 1) : [];
-    }
-
-    /**
-     * Validate a name
-     *
-     * @param string $name
-     *
-     * @return bool
-     */
-    private function validateName(string $name)
-    {
-        // Avoid creating PHP files on unsecured servers
-        return preg_match("~^[^\\0]*\\.({$this->extensions})\$~", $name) > 0;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function createDatabase(string $database, string $collation): bool
-    {
-        $options = $this->driver->options();
-        if ($this->fileExists($database, $options)) {
-            throw new DbException($this->utils->trans->lang('File exists.'));
-        }
-        $filename = $this->filename($database, $options);
-        if (!$this->validateName($filename)) {
-            throw new DbException($this->utils->trans->lang('Please use one of the extensions %s.',
-                str_replace("|", ", ", $this->extensions)));
-        }
-        try {
-            $connection = $this->driver->newConnection($database, '__create__'); // New connection
-            $connection->query('PRAGMA encoding = "UTF-8"');
-            $connection->query('CREATE TABLE dbadmin (i)'); // otherwise creates empty file
-            $connection->query('DROP TABLE dbadmin');
-        } catch (Exception $ex) {
-            throw new DbException($ex->getMessage());
-        }
-        return true;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function dropDatabase(string $database): bool
-    {
-        $filename = $this->filename($database, $this->driver->options());
-        if (!@unlink($filename)) {
-            throw new DbException($this->utils->trans->lang('File exists.'));
-        }
-        return true;
     }
 
     /**

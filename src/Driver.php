@@ -3,12 +3,6 @@
 namespace Lagdo\DbAdmin\Support\Sqlite;
 
 use Lagdo\DbAdmin\Support\AbstractDriver;
-use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractConnection;
-use Lagdo\DbAdmin\Support\Exception\AuthException;
-
-use function array_keys;
-use function class_exists;
-use function extension_loaded;
 
 class Driver extends AbstractDriver
 {
@@ -83,79 +77,5 @@ class Driver extends AbstractDriver
     public function name(): string
     {
         return "SQLite 3";
-    }
-
-    /**
-     * @inheritDoc
-     */
-    protected function beforeConnection(): void
-    {
-        // Init config
-        $this->config->jush = 'sqlite';
-        $this->config->drivers = ["SQLite3", "PDO_SQLite"];
-        $this->config->types = [["integer" => 0, "real" => 0, "numeric" => 0, "text" => 0, "blob" => 0]];
-        // $this->config->unsigned = [];
-        $this->config->operators = ["=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%",
-            "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"]; // REGEXP can be user defined function;
-        $this->config->functions = ["hex", "length", "lower", "round", "unixepoch", "upper"];
-        $this->config->grouping = ["avg", "count", "count distinct", "group_concat", "max", "min", "sum"];
-        $this->config->insertFunctions = [
-            // "text" => ["date('now')", "time('now')", "datetime('now')"],
-        ];
-        $this->config->editFunctions = [
-            "integer|real|numeric" => ["+", "-"],
-            // "text" => ["date", "time", "datetime"],
-            "text" => ["||"],
-        ];
-        $this->config->features = ['columns', 'database', 'drop_col', 'dump', 'indexes', 'descidx',
-            'move_col', 'sql', 'status', 'table', 'trigger', 'variables', 'view', 'view_trigger'];
-
-        // Regex to parse SQL statements in a text
-        $this->config->sqlStatementRegex = '\\s*|[\'"`[]|/\*|-- |$';
-    }
-
-    /**
-     * @inheritDoc
-     */
-    protected function configConnection(): void
-    {
-        if ($this->minVersion(3.31, 0)) {
-            $this->config->generated = ["STORED", "VIRTUAL"];
-        }
-    }
-
-    /**
-     * @inheritDoc
-     */
-    protected function connectionOpened(): void
-    {
-        $this->_server()->setConnection($this->connection);
-    }
-
-    /**
-     * @inheritDoc
-     * @throws AuthException
-     */
-    public function createConnection(array $options): AbstractConnection|null
-    {
-        $preferPdo = $options['prefer_pdo'] ?? false;
-        if (!$preferPdo && class_exists("SQLite3")) {
-            return new Connection\Sqlite\Connection($this,
-                $this->grammar(), $this->utils, $options, 'SQLite3');
-        }
-        if (extension_loaded("pdo_sqlite")) {
-            return new Connection\Pdo\Connection($this,
-                $this->grammar(), $this->utils, $options, 'PDO_SQLite');
-        }
-        throw new AuthException($this->utils->trans
-            ->lang('No package installed to open a Sqlite database.'));
-    }
-
-    /**
-     * @return array
-     */
-    public function structuredTypes(): array
-    {
-        return array_keys($this->config->types[0]);
     }
 }
