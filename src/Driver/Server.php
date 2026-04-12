@@ -59,7 +59,7 @@ class Server extends AbstractServer
      */
     protected function connected(): void
     {
-        if ($this->driver->minVersion(3.31, 0)) {
+        if ($this->_driver()->minVersion(3.31, 0)) {
             $this->config->generated = ["STORED", "VIRTUAL"];
         }
     }
@@ -72,15 +72,15 @@ class Server extends AbstractServer
     {
         $preferPdo = $options['prefer_pdo'] ?? false;
         if (!$preferPdo && class_exists("SQLite3")) {
-            return new Connection\Sqlite\Connection($this->driver,
-                $this->grammar, $this->utils, $options, 'SQLite3');
+            return new Connection\Sqlite\Connection($this->_driver(),
+                $this->_grammar(), $this->_utils(), $options, 'SQLite3');
         }
         if (extension_loaded("pdo_sqlite")) {
-            return new Connection\Pdo\Connection($this->driver,
-                $this->grammar, $this->utils, $options, 'PDO_SQLite');
+            return new Connection\Pdo\Connection($this->_driver(),
+                $this->_grammar(), $this->_utils(), $options, 'PDO_SQLite');
         }
 
-        throw new AuthException($this->utils->trans
+        throw new AuthException($this->_utils()->trans
             ->lang('No package installed to open a Sqlite database.'));
     }
 
@@ -97,8 +97,8 @@ class Server extends AbstractServer
      */
     public function collations(): array
     {
-        return $this->utils->input->hasTable() ?
-            $this->driver->values("PRAGMA collation_list", 1) : [];
+        return $this->_utils()->input->hasTable() ?
+            $this->_driver()->values("PRAGMA collation_list", 1) : [];
     }
 
     /**
@@ -108,7 +108,7 @@ class Server extends AbstractServer
     {
         $variables = [];
         foreach ($this->variableNames as $key) {
-            $variables[$key] = $this->driver->result("PRAGMA $key");
+            $variables[$key] = $this->_driver()->result("PRAGMA $key");
         }
         return $variables;
     }
@@ -119,7 +119,7 @@ class Server extends AbstractServer
     public function statusVariables(): array
     {
         $variables = [];
-        if (!($options = $this->driver->values("PRAGMA compile_options"))) {
+        if (!($options = $this->_driver()->values("PRAGMA compile_options"))) {
             return [];
         }
         foreach ($options as $option) {

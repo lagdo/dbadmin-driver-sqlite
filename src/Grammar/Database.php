@@ -46,7 +46,7 @@ class Database extends AbstractDatabase
     public function getDropViewsQueries(array $views): array
     {
         return array_map(fn(string $view) =>
-            'DROP VIEW ' . $this->grammar->escapeTableName($view), $views);
+            'DROP VIEW ' . $this->_grammar()->escapeTableName($view), $views);
     }
 
     /**
@@ -55,7 +55,7 @@ class Database extends AbstractDatabase
     public function getDropTablesQueries(array $tables): array
     {
         return array_map(fn(string $table) =>
-            'DROP TABLE ' . $this->grammar->escapeTableName($table), $tables);
+            'DROP TABLE ' . $this->_grammar()->escapeTableName($table), $tables);
     }
 
     /**
@@ -64,6 +64,6 @@ class Database extends AbstractDatabase
     public function getTruncateTablesQueries(array $tables): array
     {
         return array_map(fn(string $table) =>
-            'DELETE FROM ' . $this->grammar->escapeTableName($table), $tables);
+            'DELETE FROM ' . $this->_grammar()->escapeTableName($table), $tables);
     }
 }

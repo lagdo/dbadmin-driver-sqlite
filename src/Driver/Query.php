@@ -19,8 +19,8 @@ class Query extends AbstractQuery
     //     foreach ($rows as $set) {
     //         $values[] = "(" . implode(", ", $set) . ")";
     //     }
-    //     $result = $this->driver->execute("REPLACE INTO " .
-    //         $this->grammar->escapeTableName($table) . " (" .
+    //     $result = $this->_driver()->execute("REPLACE INTO " .
+    //         $this->_grammar()->escapeTableName($table) . " (" .
     //         implode(", ", array_keys(reset($rows))) .
     //         ") VALUES\n" . implode(",\n", $values));
     //     return $result !== false;
@@ -36,8 +36,8 @@ class Query extends AbstractQuery
             'type' => 'VIEW',
             'materialized' => false,
             'select' => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
-                $this->driver->result("SELECT sql FROM sqlite_master WHERE name = " .
-                $this->driver->quote($name)))
+                $this->_driver()->result("SELECT sql FROM sqlite_master WHERE name = " .
+                $this->_driver()->quote($name)))
         ]; //! identifiers may be inside []
     }
 
@@ -46,6 +46,6 @@ class Query extends AbstractQuery
      */
     public function lastAutoIncrementId(): string
     {
-        return $this->driver->result("SELECT LAST_INSERT_ROWID()");
+        return $this->_driver()->result("SELECT LAST_INSERT_ROWID()");
     }
 }
