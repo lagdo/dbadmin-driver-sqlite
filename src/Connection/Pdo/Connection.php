@@ -1,10 +1,10 @@
 <?php
 
-namespace Lagdo\DbAdmin\Support\Sqlite\Connection\Pdo;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Connection\Pdo;
 
-use Lagdo\DbAdmin\Support\Db\Engine\Connection\Pdo\AbstractConnection;
-use Lagdo\DbAdmin\Support\Sqlite\Connection\Traits\ConfigTrait;
-use Lagdo\DbAdmin\Support\Sqlite\Connection\Traits\ConnectionTrait;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Connection\Pdo\AbstractConnection;
+use Lagdo\DbAdmin\Driver\Sqlite\Connection\Traits\ConfigTrait;
+use Lagdo\DbAdmin\Driver\Sqlite\Connection\Traits\ConnectionTrait;
 
 class Connection extends AbstractConnection
 {

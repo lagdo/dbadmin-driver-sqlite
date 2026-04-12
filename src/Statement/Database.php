@@ -1,8 +1,8 @@
 <?php
 
-namespace Lagdo\DbAdmin\Support\Sqlite\Grammar;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
-use Lagdo\DbAdmin\Support\Db\Engine\Grammar\AbstractDatabase;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Statement\AbstractDatabase;
 
 use function array_map;
 
@@ -46,7 +46,7 @@ class Database extends AbstractDatabase
     public function getDropViewsQueries(array $views): array
     {
         return array_map(fn(string $view) =>
-            'DROP VIEW ' . $this->_grammar()->escapeTableName($view), $views);
+            'DROP VIEW ' . $this->_statement()->escapeTableName($view), $views);
     }
 
     /**
@@ -55,7 +55,7 @@ class Database extends AbstractDatabase
     public function getDropTablesQueries(array $tables): array
     {
         return array_map(fn(string $table) =>
-            'DROP TABLE ' . $this->_grammar()->escapeTableName($table), $tables);
+            'DROP TABLE ' . $this->_statement()->escapeTableName($table), $tables);
     }
 
     /**
@@ -64,6 +64,6 @@ class Database extends AbstractDatabase
     public function getTruncateTablesQueries(array $tables): array
     {
         return array_map(fn(string $table) =>
-            'DELETE FROM ' . $this->_grammar()->escapeTableName($table), $tables);
+            'DELETE FROM ' . $this->_statement()->escapeTableName($table), $tables);
     }
 }

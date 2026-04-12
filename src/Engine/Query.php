@@ -1,8 +1,8 @@
 <?php
 
-namespace Lagdo\DbAdmin\Support\Sqlite\Driver;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Engine;
 
-use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractQuery;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractQuery;
 
 use function array_keys;
 use function implode;
@@ -19,8 +19,8 @@ class Query extends AbstractQuery
     //     foreach ($rows as $set) {
     //         $values[] = "(" . implode(", ", $set) . ")";
     //     }
-    //     $result = $this->_driver()->execute("REPLACE INTO " .
-    //         $this->_grammar()->escapeTableName($table) . " (" .
+    //     $result = $this->_engine()->execute("REPLACE INTO " .
+    //         $this->_statement()->escapeTableName($table) . " (" .
     //         implode(", ", array_keys(reset($rows))) .
     //         ") VALUES\n" . implode(",\n", $values));
     //     return $result !== false;
@@ -36,8 +36,8 @@ class Query extends AbstractQuery
             'type' => 'VIEW',
             'materialized' => false,
             'select' => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
-                $this->_driver()->result("SELECT sql FROM sqlite_master WHERE name = " .
-                $this->_driver()->quote($name)))
+                $this->_engine()->result("SELECT sql FROM sqlite_master WHERE name = " .
+                $this->_engine()->quote($name)))
         ]; //! identifiers may be inside []
     }
 
@@ -46,6 +46,6 @@ class Query extends AbstractQuery
      */
     public function lastAutoIncrementId(): string
     {
-        return $this->_driver()->result("SELECT LAST_INSERT_ROWID()");
+        return $this->_engine()->result("SELECT LAST_INSERT_ROWID()");
     }
 }

@@ -1,11 +1,11 @@
 <?php
 
-namespace Lagdo\DbAdmin\Support\Sqlite\Driver;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Engine;
 
-use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractServer;
-use Lagdo\DbAdmin\Support\Db\Engine\Connection\AbstractConnection;
-use Lagdo\DbAdmin\Support\Exception\AuthException;
-use Lagdo\DbAdmin\Support\Sqlite\Connection;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractServer;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Connection\AbstractConnection;
+use Lagdo\DbAdmin\Driver\Exception\AuthException;
+use Lagdo\DbAdmin\Driver\Sqlite\Connection;
 
 use function class_exists;
 use function count;
@@ -59,7 +59,7 @@ class Server extends AbstractServer
      */
     protected function connected(): void
     {
-        if ($this->_driver()->minVersion(3.31, 0)) {
+        if ($this->_engine()->minVersion(3.31, 0)) {
             $this->config->generated = ["STORED", "VIRTUAL"];
         }
     }
@@ -72,12 +72,12 @@ class Server extends AbstractServer
     {
         $preferPdo = $options['prefer_pdo'] ?? false;
         if (!$preferPdo && class_exists("SQLite3")) {
-            return new Connection\Sqlite\Connection($this->_driver(),
-                $this->_grammar(), $this->_utils(), $options, 'SQLite3');
+            return new Connection\Sqlite\Connection($this->_engine(),
+                $this->_statement(), $this->_utils(), $options, 'SQLite3');
         }
         if (extension_loaded("pdo_sqlite")) {
-            return new Connection\Pdo\Connection($this->_driver(),
-                $this->_grammar(), $this->_utils(), $options, 'PDO_SQLite');
+            return new Connection\Pdo\Connection($this->_engine(),
+                $this->_statement(), $this->_utils(), $options, 'PDO_SQLite');
         }
 
         throw new AuthException($this->_utils()->trans
@@ -98,7 +98,7 @@ class Server extends AbstractServer
     public function collations(): array
     {
         return $this->_utils()->input->hasTable() ?
-            $this->_driver()->values("PRAGMA collation_list", 1) : [];
+            $this->_engine()->values("PRAGMA collation_list", 1) : [];
     }
 
     /**
@@ -108,7 +108,7 @@ class Server extends AbstractServer
     {
         $variables = [];
         foreach ($this->variableNames as $key) {
-            $variables[$key] = $this->_driver()->result("PRAGMA $key");
+            $variables[$key] = $this->_engine()->result("PRAGMA $key");
         }
         return $variables;
     }
@@ -119,7 +119,7 @@ class Server extends AbstractServer
     public function statusVariables(): array
     {
         $variables = [];
-        if (!($options = $this->_driver()->values("PRAGMA compile_options"))) {
+        if (!($options = $this->_engine()->values("PRAGMA compile_options"))) {
             return [];
         }
         foreach ($options as $option) {

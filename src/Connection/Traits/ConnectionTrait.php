@@ -1,8 +1,8 @@
 <?php
 
-namespace Lagdo\DbAdmin\Support\Sqlite\Connection\Traits;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Connection\Traits;
 
-use Lagdo\DbAdmin\Support\Db\Engine\Connection\StatementInterface;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Connection\StatementInterface;
 
 trait ConnectionTrait
 {

@@ -1,11 +1,11 @@
 <?php
 
-namespace Lagdo\DbAdmin\Support\Sqlite\Grammar;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
-use Lagdo\DbAdmin\Support\Db\Engine\Grammar\AbstractTable;
-use Lagdo\DbAdmin\Support\Dto\ColumnDto;
-use Lagdo\DbAdmin\Support\Dto\TableAlterDto;
-use Lagdo\DbAdmin\Support\Dto\TableCreateDto;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Statement\AbstractTable;
+use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
 
 use function array_map;
 use function array_reverse;
@@ -40,11 +40,11 @@ class Table extends AbstractTable
             ...$columns,
             ...$this->getForeignKeyClauses($table),
         ];
-        $quotedTableName = $this->_driver()->quote($table->name);
+        $quotedTableName = $this->_engine()->quote($table->name);
         $autoIncrementQueries = $table->autoIncrement <= 0 ? [] :
             $this->getAutoIncrementQueries($quotedTableName, $table->autoIncrement);
 
-        $tableName = $this->_grammar()->escapeTableName($table->name);
+        $tableName = $this->_statement()->escapeTableName($table->name);
         return [
             "CREATE TABLE $tableName (\n" . implode(",\n", $columns) . "\n)",
             ...$autoIncrementQueries,
@@ -65,28 +65,28 @@ class Table extends AbstractTable
         //     }
         // }
 
-        $tableName = $this->_grammar()->escapeTableName($table->name);
+        $tableName = $this->_statement()->escapeTableName($table->name);
         $queries = [];
         foreach ($table->addedColumns as $column) {
             $queries[] = "ALTER TABLE $tableName ADD " . $column->clause();
         }
         foreach ($table->changedColumns as $fieldName => $column) {
             if ($fieldName !== $column->field->name) {
-                $fieldName = $this->_grammar()->escapeId($fieldName);
+                $fieldName = $this->_statement()->escapeId($fieldName);
                 $queries[] = "ALTER TABLE $tableName RENAME $fieldName TO {$column->name}";
             }
             // SQLite doesn't directly support other changes on a table structure.
             // $queries[] = "ALTER TABLE $tableName " . $column->clause();
         }
         foreach ($table->droppedColumns as $fieldName) {
-            $queries[] = "ALTER TABLE $tableName DROP " . $this->_grammar()->escapeId($fieldName);
+            $queries[] = "ALTER TABLE $tableName DROP " . $this->_statement()->escapeId($fieldName);
         }
         if ($table->name !== $table->current->name) {
-            $currTableName = $this->_grammar()->escapeTableName($table->current->name);
+            $currTableName = $this->_statement()->escapeTableName($table->current->name);
             $queries[] = "ALTER TABLE $currTableName RENAME TO $tableName";
         }
 
-        $quotedTableName = $this->_driver()->quote($table->name);
+        $quotedTableName = $this->_engine()->quote($table->name);
         $autoIncrementQueries = $table->autoIncrement <= 0 ? [] :
             $this->getAutoIncrementQueries($quotedTableName, $table->autoIncrement);
 
@@ -101,14 +101,14 @@ class Table extends AbstractTable
      */
     public function getExportTableQueries(string $table, bool $autoIncrement, string $style): string
     {
-        $query = $this->_driver()->result("SELECT sql FROM sqlite_master " .
-            "WHERE type IN ('table', 'view') AND name = " . $this->_driver()->quote($table));
-        foreach ($this->_driver()->indexes($table) as $name => $index) {
+        $query = $this->_engine()->result("SELECT sql FROM sqlite_master " .
+            "WHERE type IN ('table', 'view') AND name = " . $this->_engine()->quote($table));
+        foreach ($this->_engine()->indexes($table) as $name => $index) {
             if ($name == '') {
                 continue;
             }
             $columns = implode(", ", array_map(function ($key) {
-                return $this->_grammar()->escapeId($key);
+                return $this->_statement()->escapeId($key);
             }, $index->columns));
             $query .= ";\n\n" . $this->getCreateIndexQuery($table, $index->type, $name, "($columns)");
         }
@@ -121,8 +121,8 @@ class Table extends AbstractTable
     public function getCreateIndexQuery(string $table, string $type, string $name, string $columns): string
     {
         return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
-            $this->_grammar()->escapeId($name != "" ? $name : uniqid($table . "_")) .
-            " ON " . $this->_grammar()->escapeTableName($table) . " $columns";
+            $this->_statement()->escapeId($name != "" ? $name : uniqid($table . "_")) .
+            " ON " . $this->_statement()->escapeTableName($table) . " $columns";
     }
 
     /**
@@ -130,7 +130,7 @@ class Table extends AbstractTable
      */
     public function getTruncateTableQuery(string $table): string
     {
-        return "DELETE FROM " . $this->_grammar()->escapeTableName($table);
+        return "DELETE FROM " . $this->_statement()->escapeTableName($table);
     }
 
     /**
@@ -139,8 +139,8 @@ class Table extends AbstractTable
     public function getCreateTriggerQuery(string $table): string
     {
         $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " .
-            $this->_driver()->quote($table);
-        return implode($this->_driver()->values($query));
+            $this->_engine()->quote($table);
+        return implode($this->_engine()->values($query));
     }
 
     /**
@@ -150,12 +150,12 @@ class Table extends AbstractTable
     {
         $queries = [];
         foreach (array_reverse($drop) as $index) {
-            $queries[] = 'DROP INDEX ' . $this->_grammar()->escapeId($index->name);
+            $queries[] = 'DROP INDEX ' . $this->_statement()->escapeId($index->name);
         }
         foreach (array_reverse($alter) as $index) {
             // Can't alter primary keys
             if ($index->type !== 'PRIMARY') {
-                $queries[] =  $this->_grammar()->getCreateIndexQuery($table, $index->type,
+                $queries[] =  $this->_statement()->getCreateIndexQuery($table, $index->type,
                     $index->name, '(' . implode(', ', $index->columns) . ')');
             }
         }

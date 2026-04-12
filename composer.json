@@ -28,7 +28,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Lagdo\\DbAdmin\\Support\\Sqlite\\": "src/"
+            "Lagdo\\DbAdmin\\Driver\\Sqlite\\": "src/"
         },
         "files": [
             "src/register.php"
@@ -36,7 +36,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Lagdo\\DbAdmin\\Support\\Sqlite\\Tests\\": "tests/"
+            "Lagdo\\DbAdmin\\Driver\\Sqlite\\Tests\\": "tests/"
         }
     }
 }

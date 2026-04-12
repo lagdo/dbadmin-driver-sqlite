@@ -1,13 +1,13 @@
 <?php
 
-namespace Lagdo\DbAdmin\Support\Sqlite\Driver;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Engine;
 
-use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractTable;
-use Lagdo\DbAdmin\Support\Dto\ForeignKeyDto;
-use Lagdo\DbAdmin\Support\Dto\IndexDto;
-use Lagdo\DbAdmin\Support\Dto\TableDto;
-use Lagdo\DbAdmin\Support\Dto\TableFieldDto;
-use Lagdo\DbAdmin\Support\Dto\TriggerDto;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractTable;
+use Lagdo\DbAdmin\Driver\Sql\Dto\ForeignKeyDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\IndexDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\TableDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\TableFieldDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\TriggerDto;
 
 use function array_combine;
 use function array_filter;
@@ -32,8 +32,8 @@ class Table extends AbstractTable
     {
         $query = "SELECT name AS Name, type AS Engine, 'rowid' AS Oid, '' AS Auto_increment " .
             "FROM sqlite_master WHERE type IN ('table', 'view') " .
-            ($table != "" ? "AND name = " . $this->_driver()->quote($table) : "ORDER BY name");
-        return $this->_driver()->rows($query);
+            ($table != "" ? "AND name = " . $this->_engine()->quote($table) : "ORDER BY name");
+        return $this->_engine()->rows($query);
     }
 
     /**
@@ -47,8 +47,8 @@ class Table extends AbstractTable
         $status->engine = $row['Engine'];
         $status->oid = $row['Oid'];
         // $status->Auto_increment = $row['Auto_increment'];
-        $query = 'SELECT COUNT(*) FROM ' . $this->_grammar()->escapeId($row['Name']);
-        $status->rows = $this->_driver()->result($query);
+        $query = 'SELECT COUNT(*) FROM ' . $this->_statement()->escapeId($row['Name']);
+        $status->rows = $this->_engine()->result($query);
 
         return $status;
     }
@@ -68,13 +68,13 @@ class Table extends AbstractTable
         $index->type = $row["unique"] ? "UNIQUE" : "INDEX";
         $index->lengths = [];
         $index->descs = [];
-        $columns = $this->_driver()->rows("PRAGMA index_info(" . $this->_grammar()->escapeId($index->name) . ")");
+        $columns = $this->_engine()->rows("PRAGMA index_info(" . $this->_statement()->escapeId($index->name) . ")");
         foreach ($columns as $column) {
             $index->columns[] = $column["name"];
             $index->descs[] = null;
         }
-        if (preg_match('~^CREATE( UNIQUE)? INDEX ' . preg_quote($this->_grammar()->escapeId($index->name) . ' ON ' .
-                $this->_grammar()->escapeId($table), '~') . ' \((.*)\)$~i', $results[$index->name] ?? '', $regs)) {
+        if (preg_match('~^CREATE( UNIQUE)? INDEX ' . preg_quote($this->_statement()->escapeId($index->name) . ' ON ' .
+                $this->_statement()->escapeId($table), '~') . ' \((.*)\)$~i', $results[$index->name] ?? '', $regs)) {
             preg_match_all('/("[^"]*+")+( DESC)?/', $regs[2], $matches);
             foreach ($matches[2] as $key => $val) {
                 if ($val) {
@@ -93,15 +93,15 @@ class Table extends AbstractTable
     private function queryPrimaryIndex(string $table): ?IndexDto
     {
         $primaryIndex = null;
-        $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->_driver()->quote($table);
-        $result = $this->_driver()->result($query);
+        $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->_engine()->quote($table);
+        $result = $this->_engine()->result($query);
         if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
             $primaryIndex = new IndexDto();
             $primaryIndex->type = "PRIMARY";
             preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i',
                 $match[1], $matches, PREG_SET_ORDER);
             foreach ($matches as $match) {
-                $primaryIndex->columns[] = $this->_grammar()->unescapeId($match[2]) . $match[4];
+                $primaryIndex->columns[] = $this->_statement()->unescapeId($match[2]) . $match[4];
                 $primaryIndex->descs[] = (preg_match('~DESC~i', $match[5]) ? '1' : null);
             }
         }
@@ -161,7 +161,7 @@ class Table extends AbstractTable
      */
     public function supportForeignKeys(TableDto $tableStatus): bool
     {
-        return !$this->_driver()->result("SELECT sqlite_compileoption_used('OMIT_FOREIGN_KEY')");
+        return !$this->_engine()->result("SELECT sqlite_compileoption_used('OMIT_FOREIGN_KEY')");
     }
 
     /**
@@ -225,9 +225,9 @@ class Table extends AbstractTable
     private function tableFields(string $table): array
     {
         $fields = [];
-        $infoTableName = 'table_' . ($this->_driver()->minVersion(3.31) ? 'x' : '') . 'info';
-        $tableName = $this->_grammar()->escapeTableName($table);
-        $rows = $this->_driver()->rows("PRAGMA $infoTableName($tableName)");
+        $infoTableName = 'table_' . ($this->_engine()->minVersion(3.31) ? 'x' : '') . 'info';
+        $tableName = $this->_statement()->escapeTableName($table);
+        $rows = $this->_engine()->rows("PRAGMA $infoTableName($tableName)");
         $primary = '';
         foreach ($rows as $row) {
             $field = $this->makeFieldDto($row);
@@ -253,8 +253,8 @@ class Table extends AbstractTable
     {
         $fields = $this->tableFields($table);
 
-        $tableName = $this->_driver()->quote($table);
-        $sql = $this->_driver()->result("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName");
+        $tableName = $this->_engine()->quote($table);
+        $sql = $this->_engine()->result("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName");
         $idf = '(("[^"]*+")+|[a-z0-9_]+)';
         $pattern = '~' . $idf . '\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i';
         preg_match_all($pattern, $sql, $matches, PREG_SET_ORDER);
@@ -287,9 +287,9 @@ class Table extends AbstractTable
         }
 
         $indexes = ['' => $primaryIndex];
-        $query = "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = " . $this->_driver()->quote($table);
-        $results = $this->_driver()->keyValues($query);
-        $rows = $this->_driver()->rows("PRAGMA index_list(" . $this->_grammar()->escapeTableName($table) . ")");
+        $query = "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = " . $this->_engine()->quote($table);
+        $results = $this->_engine()->keyValues($query);
+        $rows = $this->_engine()->rows("PRAGMA index_list(" . $this->_statement()->escapeTableName($table) . ")");
         foreach ($rows as $row) {
             $index = $this->makeIndexDto($row, $results, $table);
             if ($this->indexIsPrimary($index, $primaryIndex)) {
@@ -306,8 +306,8 @@ class Table extends AbstractTable
     public function foreignKeys(string $table): array
     {
         $foreignKeys = [];
-        $query = 'PRAGMA foreign_key_list(' . $this->_grammar()->escapeTableName($table) . ')';
-        foreach ($this->_driver()->rows($query) as $row) {
+        $query = 'PRAGMA foreign_key_list(' . $this->_statement()->escapeTableName($table) . ')';
+        foreach ($this->_engine()->rows($query) as $row) {
             $name = $row['id'];
             if (!isset($foreignKeys[$name])) {
                 $foreignKeys[$name] = new ForeignKeyDto();
@@ -325,10 +325,10 @@ class Table extends AbstractTable
      */
     public function checkConstraints(TableDto $status): array
     {
-        $table = $this->_driver()->quote($status->name);
+        $table = $this->_engine()->quote($status->name);
         $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $table";
         preg_match_all('~ CHECK *(\( *(((?>[^()]*[^() ])|(?1))*) *\))~',
-            $this->_driver()->result($query, 0) ?? '', $matches); //! could be inside a comment
+            $this->_engine()->result($query, 0) ?? '', $matches); //! could be inside a comment
         return array_combine($matches[2], $matches[2]);
     }
 
@@ -395,11 +395,11 @@ class Table extends AbstractTable
         $options = $this->triggerOptions();
         preg_match("~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $options["Timing"]) .
             ")\\s+([a-z]+)(?:\\s+OF\\s+($idf))?\\s+ON\\s*$idf\\s*(?:FOR\\s+EACH\\s+ROW\\s)?(.*)~is",
-            $this->_driver()->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
-                $this->_driver()->quote($name)), $match);
+            $this->_engine()->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
+                $this->_engine()->quote($name)), $match);
         $of = $match[3];
         return new TriggerDto(strtoupper($match[1]), strtoupper($match[2]), $match[4],
-            ($of[0] == '`' || $of[0] == '"' ? $this->_grammar()->unescapeId($of) : $of), $name);
+            ($of[0] == '`' || $of[0] == '"' ? $this->_statement()->unescapeId($of) : $of), $name);
     }
 
     /**
@@ -409,8 +409,8 @@ class Table extends AbstractTable
     {
         $triggers = [];
         $options = $this->triggerOptions();
-        $query = "SELECT * FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->_driver()->quote($table);
-        foreach ($this->_driver()->rows($query) as $row) {
+        $query = "SELECT * FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " . $this->_engine()->quote($table);
+        foreach ($this->_engine()->rows($query) as $row) {
             preg_match('~^CREATE\s+TRIGGER\s*(?:[^`"\s]+|`[^`]*`|"[^"]*")+\s*(' .
                 implode("|", $options["Timing"]) . ')\s*(.*?)\s+ON\b~i', $row["sql"], $match);
             $triggers[$row["name"]] = new TriggerDto($match[1], $match[2], '', '', $row["name"]);

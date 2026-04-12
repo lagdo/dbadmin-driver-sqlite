@@ -1,11 +1,11 @@
 <?php
 
-namespace Lagdo\DbAdmin\Support\Sqlite\Driver;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Engine;
 
-use Lagdo\DbAdmin\Support\Db\Engine\Connection\StatementInterface;
-use Lagdo\DbAdmin\Support\Db\Engine\Driver\AbstractDatabase;
-use Lagdo\DbAdmin\Support\Exception\DbException;
-use Lagdo\DbAdmin\Support\Sqlite\Connection\Traits\ConfigTrait;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Connection\StatementInterface;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractDatabase;
+use Lagdo\DbAdmin\Driver\Exception\DbException;
+use Lagdo\DbAdmin\Driver\Sqlite\Connection\Traits\ConfigTrait;
 use DirectoryIterator;
 use Exception;
 
@@ -32,7 +32,7 @@ class Database extends AbstractDatabase
      */
     public function tables(): array
     {
-        return $this->_driver()->keyValues('SELECT name, type FROM sqlite_master ' .
+        return $this->_engine()->keyValues('SELECT name, type FROM sqlite_master ' .
             "WHERE type IN ('table', 'view') ORDER BY (name = 'sqlite_sequence'), name");
     }
 
@@ -42,7 +42,7 @@ class Database extends AbstractDatabase
     public function databases(bool $flush): array
     {
         $databases = [];
-        $directory = $this->directory($this->_driver()->options());
+        $directory = $this->directory($this->_engine()->options());
         $iterator = new DirectoryIterator($directory);
         // Iterate on dir content
         foreach($iterator as $file)
@@ -62,7 +62,7 @@ class Database extends AbstractDatabase
      */
     public function databaseSize(string $database): int
     {
-        $connection = $this->_driver()->newConnection($database); // New connection
+        $connection = $this->_engine()->newConnection($database); // New connection
         if (!$connection) {
             return 0;
         }
@@ -86,8 +86,8 @@ class Database extends AbstractDatabase
      */
     public function databaseCollation(string $database, array $collations): string
     {
-        // there is no database list so $database == $this->_driver()->database()
-        return $this->_driver()->result("PRAGMA encoding");
+        // there is no database list so $database == $this->_engine()->database()
+        return $this->_engine()->result("PRAGMA encoding");
     }
 
     /**
@@ -108,7 +108,7 @@ class Database extends AbstractDatabase
      */
     public function createDatabase(string $database, string $collation): bool
     {
-        $options = $this->_driver()->options();
+        $options = $this->_engine()->options();
         if ($this->fileExists($database, $options)) {
             throw new DbException($this->_utils()->lang('File exists.'));
         }
@@ -118,7 +118,7 @@ class Database extends AbstractDatabase
                 str_replace("|", ", ", $this->extensions)));
         }
         try {
-            $connection = $this->_driver()->newConnection($database, '__create__'); // New connection
+            $connection = $this->_engine()->newConnection($database, '__create__'); // New connection
             $connection->query('PRAGMA encoding = "UTF-8"');
             $connection->query('CREATE TABLE dbadmin (i)'); // otherwise creates empty file
             $connection->query('DROP TABLE dbadmin');
@@ -133,7 +133,7 @@ class Database extends AbstractDatabase
      */
     public function dropDatabase(string $database): bool
     {
-        $filename = $this->filename($database, $this->_driver()->options());
+        $filename = $this->filename($database, $this->_engine()->options());
         if (!@unlink($filename)) {
             throw new DbException($this->_utils()->lang('File exists.'));
         }
@@ -149,7 +149,7 @@ class Database extends AbstractDatabase
         $query = "SELECT count(*) FROM sqlite_master WHERE type IN ('table', 'view')";
         foreach ($databases as $database) {
             $counts[$database] = 0;
-            $connection = $this->_driver()->newConnection($database);
+            $connection = $this->_engine()->newConnection($database);
             $statement = $connection->query($query);
             if (is_object($statement) && ($row = $statement->fetchRow())) {
                 $counts[$database] = intval($row[0]);

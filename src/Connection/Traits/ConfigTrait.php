@@ -1,6 +1,6 @@
 <?php
 
-namespace Lagdo\DbAdmin\Support\Sqlite\Connection\Traits;
+namespace Lagdo\DbAdmin\Driver\Sqlite\Connection\Traits;
 
 use function rtrim;
 use function str_replace;
