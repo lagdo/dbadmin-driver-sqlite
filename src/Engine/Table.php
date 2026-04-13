@@ -44,11 +44,11 @@ class Table extends AbstractTable
     private function makeStatus(array $row): TableDto
     {
         $status = new TableDto($row['Name']);
-        $status->engine = $row['Engine'];
+        $status->engine = $row['Engine'] ?? '';
         $status->oid = $row['Oid'];
         // $status->Auto_increment = $row['Auto_increment'];
         $query = 'SELECT COUNT(*) FROM ' . $this->_statement()->escapeId($row['Name']);
-        $status->rows = $this->_engine()->result($query);
+        $status->rowCount = (int)$this->_engine()->result($query);
 
         return $status;
     }
