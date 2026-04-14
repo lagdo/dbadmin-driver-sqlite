@@ -2,9 +2,9 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Engine;
 
-use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractServer;
-use Lagdo\DbAdmin\Driver\Sql\Specific\Connection\AbstractConnection;
 use Lagdo\DbAdmin\Driver\Exception\AuthException;
+use Lagdo\DbAdmin\Driver\Sql\Connection\AbstractConnection;
+use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractServer;
 use Lagdo\DbAdmin\Driver\Sqlite\Connection;
 
 use function class_exists;
