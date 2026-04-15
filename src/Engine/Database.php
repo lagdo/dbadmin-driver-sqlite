@@ -62,7 +62,7 @@ class Database extends AbstractDatabase
      */
     public function databaseSize(string $database): int
     {
-        $connection = $this->_engine()->newConnection($database); // New connection
+        $connection = $this->_engine()->openNewConnection($database); // New connection
         if (!$connection) {
             return 0;
         }
@@ -118,7 +118,7 @@ class Database extends AbstractDatabase
                 str_replace("|", ", ", $this->extensions)));
         }
         try {
-            $connection = $this->_engine()->newConnection($database, '__create__'); // New connection
+            $connection = $this->_engine()->openNewConnection($database, '__create__'); // New connection
             $connection->query('PRAGMA encoding = "UTF-8"');
             $connection->query('CREATE TABLE dbadmin (i)'); // otherwise creates empty file
             $connection->query('DROP TABLE dbadmin');
@@ -149,7 +149,7 @@ class Database extends AbstractDatabase
         $query = "SELECT count(*) FROM sqlite_master WHERE type IN ('table', 'view')";
         foreach ($databases as $database) {
             $counts[$database] = 0;
-            $connection = $this->_engine()->newConnection($database);
+            $connection = $this->_engine()->openNewConnection($database);
             $statement = $connection->query($query);
             if (is_object($statement) && ($row = $statement->fetchRow())) {
                 $counts[$database] = intval($row[0]);

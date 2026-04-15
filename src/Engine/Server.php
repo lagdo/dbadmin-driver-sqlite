@@ -28,7 +28,7 @@ class Server extends AbstractServer
     /**
      * @inheritDoc
      */
-    protected function starting(): void
+    protected function configure(): void
     {
         // Init config
         $this->config->jush = 'sqlite';
