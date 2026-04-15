@@ -32,7 +32,7 @@ Databases are files with extension `db`, `sdb` or `sqlite`.
 ```php
     'app' => [
         'packages' => [
-            Lagdo\DbAdmin\Db\DbAdminPackage::class => [
+            Lagdo\DbAdmin\App\DbAdminPackage::class => [
                 'servers' => [
                     'server_id' => [ // A unique identifier for this server
                         'driver' => 'sqlite',
