@@ -140,7 +140,7 @@ class Table extends AbstractTable
     {
         $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " .
             $this->_engine()->quote($table);
-        return implode($this->_engine()->values($query));
+        return implode($this->_engine()->columnValues($query));
     }
 
     /**

@@ -98,7 +98,7 @@ class Server extends AbstractServer
     public function collations(): array
     {
         return $this->_utils()->input->hasTable() ?
-            $this->_engine()->values("PRAGMA collation_list", 1) : [];
+            $this->_engine()->columnValues("PRAGMA collation_list", 1) : [];
     }
 
     /**
@@ -119,7 +119,7 @@ class Server extends AbstractServer
     public function statusVariables(): array
     {
         $variables = [];
-        if (!($options = $this->_engine()->values("PRAGMA compile_options"))) {
+        if (!($options = $this->_engine()->columnValues("PRAGMA compile_options"))) {
             return [];
         }
         foreach ($options as $option) {

@@ -30,9 +30,11 @@ class Table extends AbstractTable
      */
     private function queryStatus(string $table = ''): array
     {
-        $query = "SELECT name AS Name, type AS Engine, 'rowid' AS Oid, '' AS Auto_increment " .
-            "FROM sqlite_master WHERE type IN ('table', 'view') " .
-            ($table != "" ? "AND name = " . $this->_engine()->quote($table) : "ORDER BY name");
+        $tableName = $this->_engine()->quote($table);
+        $query = "SELECT name AS Name, type AS Engine, 'rowid' AS Oid,
+(SELECT seq FROM sqlite_sequence s WHERE s.name = m.name) AS Auto_increment
+FROM sqlite_master m WHERE type IN ('table', 'view') " .
+            ($table !== '' ? "AND name = $tableName" : "ORDER BY name");
         return $this->_engine()->rows($query);
     }
 
@@ -46,9 +48,10 @@ class Table extends AbstractTable
         $status = new TableDto($row['Name']);
         $status->engine = $row['Engine'] ?? '';
         $status->oid = $row['Oid'];
-        // $status->Auto_increment = $row['Auto_increment'];
+        $status->hasAutoIncrement = $row['Auto_increment'] !== null;
+        $status->autoIncrement = $row['Auto_increment'] ?? 0;
         $query = 'SELECT COUNT(*) FROM ' . $this->_statement()->escapeId($row['Name']);
-        $status->rowCount = (int)$this->_engine()->result($query);
+        $status->rowCount = (int)$this->_engine()->columnValue($query);
 
         return $status;
     }
@@ -257,7 +260,7 @@ class Table extends AbstractTable
         $sql = $this->_engine()->result("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName");
         $idf = '(("[^"]*+")+|[a-z0-9_]+)';
         $pattern = '~' . $idf . '\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i';
-        preg_match_all($pattern, $sql, $matches, PREG_SET_ORDER);
+        preg_match_all($pattern, $sql ?? '', $matches, PREG_SET_ORDER);
         foreach ($matches as $match) {
             $name = str_replace('""', '"', preg_replace('~^"|"$~', '', $match[1]));
             if (isset($fields[$name])) {
@@ -266,7 +269,7 @@ class Table extends AbstractTable
         }
 
         $pattern = '~' . $idf . '\s.*GENERATED ALWAYS AS \((.+)\) (STORED|VIRTUAL)~i';
-        preg_match_all($pattern, $sql, $matches, PREG_SET_ORDER);
+        preg_match_all($pattern, $sql ?? '', $matches, PREG_SET_ORDER);
         foreach ($matches as $match) {
             $name = str_replace('""', '"', preg_replace('~^"|"$~', '', $match[1]));
             $fields[$name]->default = $match[3];
