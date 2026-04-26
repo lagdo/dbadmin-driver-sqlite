@@ -57,101 +57,6 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
     }
 
     /**
-     * @param array $row
-     * @param array $results
-     * @param string $table
-     *
-     * @return IndexDto
-     */
-    private function makeIndexDto(array $row, array $results, string $table): IndexDto
-    {
-        $index = new IndexDto();
-
-        $index->name = $row["name"];
-        $index->type = $row["unique"] ? "UNIQUE" : "INDEX";
-        $index->lengths = [];
-        $index->descs = [];
-        $columns = $this->_engine()->rows("PRAGMA index_info(" . $this->_statement()->escapeId($index->name) . ")");
-        foreach ($columns as $column) {
-            $index->columns[] = $column["name"];
-            $index->descs[] = null;
-        }
-        if (preg_match('~^CREATE( UNIQUE)? INDEX ' . preg_quote($this->_statement()->escapeId($index->name) . ' ON ' .
-                $this->_statement()->escapeId($table), '~') . ' \((.*)\)$~i', $results[$index->name] ?? '', $regs)) {
-            preg_match_all('/("[^"]*+")+( DESC)?/', $regs[2], $matches);
-            foreach ($matches[2] as $key => $val) {
-                if ($val) {
-                    $index->descs[$key] = '1';
-                }
-            }
-        }
-        return $index;
-    }
-
-    /**
-     * @param string $table
-     *
-     * @return IndexDto|null
-     */
-    private function queryPrimaryIndex(string $table): ?IndexDto
-    {
-        $primaryIndex = null;
-        $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = " . $this->_engine()->quote($table);
-        $result = $this->_engine()->result($query);
-        if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
-            $primaryIndex = new IndexDto();
-            $primaryIndex->type = "PRIMARY";
-            preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i',
-                $match[1], $matches, PREG_SET_ORDER);
-            foreach ($matches as $match) {
-                $primaryIndex->columns[] = $this->_statement()->unescapeId($match[2]) . $match[4];
-                $primaryIndex->descs[] = (preg_match('~DESC~i', $match[5]) ? '1' : null);
-            }
-        }
-        return $primaryIndex;
-    }
-
-    /**
-     * @param string $table
-     *
-     * @return IndexDto|null
-     */
-    private function makePrimaryIndex(string $table): ?IndexDto
-    {
-        $primaryIndex = $this->queryPrimaryIndex($table);
-        if ($primaryIndex !== null) {
-            return $primaryIndex;
-        }
-        $primaryFields = array_filter($this->fields($table), function($field) {
-            return $field->primary;
-        });
-        if (!$primaryFields) {
-            return null;
-        }
-        $primaryIndex = new IndexDto();
-        $primaryIndex->type = "PRIMARY";
-        $primaryIndex->lengths = [];
-        $primaryIndex->descs = [null];
-        $primaryIndex->columns = [];
-        foreach ($primaryFields as $name => $field) {
-            $primaryIndex->columns[] = $name;
-        }
-        return $primaryIndex;
-    }
-
-    /**
-     * @param IndexDto $index
-     * @param IndexDto $primaryIndex
-     *
-     * @return bool
-     */
-    private function indexIsPrimary(IndexDto $index, IndexDto $primaryIndex): bool
-    {
-        return $index->type === 'UNIQUE' && $index->columns == $primaryIndex->columns &&
-            $index->descs == $primaryIndex->descs && preg_match("~^sqlite_~", $index->name);
-    }
-
-    /**
      * @inheritDoc
      */
     public function isView(TableDto $tableStatus): bool
@@ -217,6 +122,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
         $field->nullable = !$row["notnull"];
         $field->privileges = ["select" => 1, "insert" => 1, "update" => 1, "where" => 1, "order" => 1];
         $field->primary = $row["pk"];
+
         return $field;
     }
 
@@ -280,26 +186,111 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
     }
 
     /**
+     * @param string $table
+     *
+     * @return IndexDto|null
+     */
+    private function makePrimaryIndex(string $table): ?IndexDto
+    {
+        $tableName = $this->_engine()->quote($table);
+        $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName";
+        $result = $this->_engine()->result($query) ?? '';
+        if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
+            $primaryIndex = new IndexDto();
+            $primaryIndex->type = "PRIMARY";
+            preg_match_all('~((("[^"]*+")+|(?:`[^`]*+`)+)|(\S+))(\s+(ASC|DESC))?(,\s*|$)~i',
+                $match[1], $matches, PREG_SET_ORDER);
+            foreach ($matches as $match) {
+                $primaryIndex->columns[] = $this->_statement()->unescapeId($match[2]) . $match[4];
+                $primaryIndex->descs[] = (preg_match('~DESC~i', $match[5]) ? '1' : null);
+            }
+            return $primaryIndex;
+        }
+
+        $primaryFields = array_filter($this->fields($table), fn($field) => $field->primary);
+        if (!$primaryFields) {
+            return null;
+        }
+
+        $primaryIndex = new IndexDto();
+        $primaryIndex->type = "PRIMARY";
+        foreach ($primaryFields as $name => $field) {
+            $primaryIndex->columns[] = $name;
+            $primaryIndex->descs[] = null;
+        }
+        return $primaryIndex;
+    }
+
+    /**
+     * @param array $row
+     * @param array $results
+     * @param string $table
+     *
+     * @return IndexDto
+     */
+    private function makeIndexDto(array $row, array $results, string $table): IndexDto
+    {
+        $index = new IndexDto();
+        $index->name = $row["name"];
+        $index->type = $row["unique"] ? "UNIQUE" : "INDEX";
+
+        $indexName = $this->_statement()->escapeId($index->name);
+        $columns = $this->_engine()->rows("PRAGMA index_info($indexName)");
+        foreach ($columns as $column) {
+            $index->columns[] = $column["name"];
+            $index->descs[] = null;
+        }
+
+        $tableName = $this->_statement()->escapeId($table);
+        $indexClause = preg_quote("$indexName ON $tableName", '~');
+        $regex = "~^CREATE( UNIQUE)? INDEX $indexClause \((.*)\)$~i";
+        if (preg_match($regex, $results[$index->name] ?? '', $regs)) {
+            preg_match_all('/("[^"]*+")+( DESC)?/', $regs[2], $matches);
+            foreach ($matches[2] as $key => $val) {
+                if ($val) {
+                    $index->descs[$key] = '1';
+                }
+            }
+        }
+        return $index;
+    }
+
+    /**
+     * @param IndexDto $index
+     * @param IndexDto|null $primaryIndex
+     *
+     * @return bool
+     */
+    private function indexIsValid(IndexDto $index, IndexDto|null $primaryIndex): bool
+    {
+        // The arrays are compared using the "!=" operation.
+        return $primaryIndex === null || $index->type !== 'UNIQUE' ||
+            $index->columns != $primaryIndex->columns ||
+            $index->descs != $primaryIndex->descs ||
+            preg_match("~^sqlite_~", $index->name);
+    }
+
+    /**
      * @inheritDoc
      */
     public function indexes(string $table): array
     {
         $primaryIndex = $this->makePrimaryIndex($table);
-        if ($primaryIndex === null) {
-            return [];
-        }
+        $indexes = $primaryIndex === null ? [] : ['' => $primaryIndex];
 
-        $indexes = ['' => $primaryIndex];
-        $query = "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = " . $this->_engine()->quote($table);
+        $tableName = $this->_engine()->quote($table);
+        $query = "SELECT name, sql FROM sqlite_master
+WHERE type = 'index' AND tbl_name = $tableName";
         $results = $this->_engine()->keyValues($query);
-        $rows = $this->_engine()->rows("PRAGMA index_list(" . $this->_statement()->escapeTableName($table) . ")");
+
+        $tableName = $this->_statement()->escapeTableName($table);
+        $rows = $this->_engine()->rows("PRAGMA index_list($tableName)");
         foreach ($rows as $row) {
             $index = $this->makeIndexDto($row, $results, $table);
-            if ($this->indexIsPrimary($index, $primaryIndex)) {
+            if ($this->indexIsValid($index, $primaryIndex)) {
                 $indexes[$index->name] = $index;
             }
         }
-
         return $indexes;
     }
 
