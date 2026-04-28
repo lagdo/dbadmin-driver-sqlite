@@ -47,7 +47,7 @@ class Server extends AbstractServer
             // "text" => ["date", "time", "datetime"],
             "text" => ["||"],
         ];
-        $this->config->features = ['columns', 'database', 'drop_col', 'dump', 'indexes', 'descidx',
+        $this->config->features = ['check', 'columns', 'database', 'drop_col', 'dump', 'indexes', 'descidx',
             'move_col', 'sql', 'status', 'table', 'trigger', 'variables', 'view', 'view_trigger'];
 
         // Regex to parse SQL statements in a text
