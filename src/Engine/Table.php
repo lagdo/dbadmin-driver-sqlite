@@ -2,10 +2,10 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Engine;
 
+use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\ForeignKeyDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\IndexDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableDto;
-use Lagdo\DbAdmin\Driver\Sql\Dto\TableFieldDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TriggerDto;
 use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractTable;
 
@@ -108,59 +108,59 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
     /**
      * @param array $row
      *
-     * @return TableFieldDto
+     * @return ColumnDto
      */
-    private function makeFieldDto(array $row): TableFieldDto
+    private function makeColumnDto(array $row): ColumnDto
     {
-        $field = new TableFieldDto();
+        $column = new ColumnDto();
 
         $type = strtolower($row["type"]);
-        $field->name = $row["name"];
-        $field->type = $this->rowType($type);
-        $field->fullType = $type;
-        $field->default = $this->defaultvalue($row);
-        $field->nullable = !$row["notnull"];
-        $field->privileges = ["select" => 1, "insert" => 1, "update" => 1, "where" => 1, "order" => 1];
-        $field->primary = $row["pk"];
+        $column->name = $row["name"];
+        $column->type = $this->rowType($type);
+        $column->fullType = $type;
+        $column->default = $this->defaultvalue($row);
+        $column->nullable = !$row["notnull"];
+        $column->privileges = ["select" => 1, "insert" => 1, "update" => 1, "where" => 1, "order" => 1];
+        $column->primary = $row["pk"];
 
-        return $field;
+        return $column;
     }
 
     /**
      * @param string $table
      *
-     * @return array<TableFieldDto>
+     * @return array<ColumnDto>
      */
-    private function tableFields(string $table): array
+    private function tableColumns(string $table): array
     {
-        $fields = [];
+        $columns = [];
         $infoTableName = 'table_' . ($this->_engine()->minVersion(3.31) ? 'x' : '') . 'info';
         $tableName = $this->_statement()->escapeTableName($table);
         $rows = $this->_engine()->rows("PRAGMA $infoTableName($tableName)");
         $primary = '';
         foreach ($rows as $row) {
-            $field = $this->makeFieldDto($row);
+            $column = $this->makeColumnDto($row);
             if ($row['pk']) {
                 if ($primary != '') {
-                    $fields[$primary]->autoIncrement = false;
-                } elseif (preg_match('~^integer$~i', $field->fullType)) {
-                    $field->autoIncrement = true;
+                    $columns[$primary]->autoIncrement = false;
+                } elseif (preg_match('~^integer$~i', $column->fullType)) {
+                    $column->autoIncrement = true;
                 }
-                $primary = $field->name;
+                $primary = $column->name;
             }
 
-            $fields[$field->name] = $field;
+            $columns[$column->name] = $column;
         }
 
-        return $fields;
+        return $columns;
     }
 
     /**
      * @inheritDoc
      */
-    public function fields(string $table): array
+    public function columns(string $table): array
     {
-        $fields = $this->tableFields($table);
+        $columns = $this->tableColumns($table);
 
         $tableName = $this->_engine()->quote($table);
         $sql = $this->_engine()->result("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName");
@@ -169,8 +169,8 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
         preg_match_all($pattern, $sql ?? '', $matches, PREG_SET_ORDER);
         foreach ($matches as $match) {
             $name = str_replace('""', '"', preg_replace('~^"|"$~', '', $match[1]));
-            if (isset($fields[$name])) {
-                $fields[$name]->collation = trim($match[3], "'");
+            if (isset($columns[$name])) {
+                $columns[$name]->collation = trim($match[3], "'");
             }
         }
 
@@ -178,11 +178,11 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
         preg_match_all($pattern, $sql ?? '', $matches, PREG_SET_ORDER);
         foreach ($matches as $match) {
             $name = str_replace('""', '"', preg_replace('~^"|"$~', '', $match[1]));
-            $fields[$name]->default = $match[3];
-            $fields[$name]->generated = strtoupper($match[4]);
+            $columns[$name]->default = $match[3];
+            $columns[$name]->generated = strtoupper($match[4]);
         }
 
-        return $fields;
+        return $columns;
     }
 
     /**
@@ -207,14 +207,15 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
             return $primaryIndex;
         }
 
-        $primaryFields = array_filter($this->fields($table), fn($field) => $field->primary);
-        if (!$primaryFields) {
+        $primaryColumns = array_filter($this->columns($table),
+            fn(ColumnDto $column) => $column->primary);
+        if (!$primaryColumns) {
             return null;
         }
 
         $primaryIndex = new IndexDto();
         $primaryIndex->type = "PRIMARY";
-        foreach ($primaryFields as $name => $field) {
+        foreach ($primaryColumns as $name => $column) {
             $primaryIndex->columns[] = $name;
             $primaryIndex->descs[] = null;
         }

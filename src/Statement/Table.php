@@ -2,12 +2,14 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
-use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnInputDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
 use Lagdo\DbAdmin\Driver\Sql\Specific\Statement\AbstractTable;
 
+use function array_filter;
 use function array_map;
+use function array_keys;
 use function array_reverse;
 use function implode;
 use function uniqid;
@@ -33,20 +35,20 @@ class Table extends AbstractTable
      */
     public function getCreateTableQueries(TableCreateDto $table): array
     {
-        // $useAllFields = true;
+        // $useAllColumns = true;
 
-        $columns = array_map(fn(ColumnDto $column) => $column->clause(), $table->columns);
-        $columns = [
-            ...$columns,
+        $clauses = array_map(fn(ColumnInputDto $input) => $input->clauses(), $table->inputs['added']);
+        $clauses = implode(",\n", [
+            ...$clauses,
             ...$this->getForeignKeyClauses($table),
-        ];
+        ]);
         $quotedTableName = $this->_engine()->quote($table->name);
         $autoIncrementQueries = $table->autoIncrement <= 0 ? [] :
             $this->getAutoIncrementQueries($quotedTableName, $table->autoIncrement);
 
         $tableName = $this->_statement()->escapeTableName($table->name);
         return [
-            "CREATE TABLE $tableName (\n" . implode(",\n", $columns) . "\n)",
+            "CREATE TABLE $tableName (\n$clauses\n)",
             ...$autoIncrementQueries,
         ];
     }
@@ -56,30 +58,31 @@ class Table extends AbstractTable
      */
     public function getAlterTableQueries(TableAlterDto $table): array
     {
-        // $useAllFields = count($table->foreignKeys) > 0 || count($table->changedColumns) > 0;
-        // if (!$useAllFields) {
-        //     foreach ($table->addedColumns as $column) {
-        //         if (!$field[1] || $field[2]) {
-        //             $useAllFields = true;
+        // $useAllColumns = count($table->foreignKeys) > 0 || count($table->changedColumns) > 0;
+        // if (!$useAllColumns) {
+        //     foreach ($table->inputs['added'] as $input) {
+        //         if (!$input[1] || $input[2]) {
+        //             $useAllColumns = true;
         //         }
         //     }
         // }
 
         $tableName = $this->_statement()->escapeTableName($table->name);
         $queries = [];
-        foreach ($table->addedColumns as $column) {
-            $queries[] = "ALTER TABLE $tableName ADD " . $column->clause();
+        foreach ($table->inputs['added'] as $input) {
+            $queries[] = "ALTER TABLE $tableName ADD " . $input->clauses();
         }
-        foreach ($table->changedColumns as $fieldName => $column) {
-            if ($fieldName !== $column->field->name) {
-                $fieldName = $this->_statement()->escapeId($fieldName);
-                $queries[] = "ALTER TABLE $tableName RENAME $fieldName TO {$column->name}";
+        foreach ($table->inputs['edited'] as $input) {
+            if ($input->name !== $input->column->name) {
+                $columnName = $this->_statement()->escapeId($input->column->name);
+                $queries[] = "ALTER TABLE $tableName RENAME $columnName TO {$input->name}";
             }
             // SQLite doesn't directly support other changes on a table structure.
-            // $queries[] = "ALTER TABLE $tableName " . $column->clause();
+            // $queries[] = "ALTER TABLE $tableName " . $input->clauses();
         }
-        foreach ($table->droppedColumns as $fieldName) {
-            $queries[] = "ALTER TABLE $tableName DROP " . $this->_statement()->escapeId($fieldName);
+        foreach ($table->droppedColumns as $columnName) {
+            $columnName = $this->_statement()->escapeId($columnName);
+            $queries[] = "ALTER TABLE $tableName DROP $columnName";
         }
         if ($table->name !== $table->current->name) {
             $currTableName = $this->_statement()->escapeTableName($table->current->name);
@@ -101,18 +104,20 @@ class Table extends AbstractTable
      */
     public function getExportTableQueries(string $table, bool $autoIncrement, string $style): string
     {
-        $query = $this->_engine()->result("SELECT sql FROM sqlite_master " .
-            "WHERE type IN ('table', 'view') AND name = " . $this->_engine()->quote($table));
-        foreach ($this->_engine()->indexes($table) as $name => $index) {
-            if ($name == '') {
-                continue;
-            }
-            $columns = implode(", ", array_map(function ($key) {
-                return $this->_statement()->escapeId($key);
-            }, $index->columns));
-            $query .= ";\n\n" . $this->getCreateIndexQuery($table, $index->type, $name, "($columns)");
-        }
-        return $query;
+        $tableName = $this->_engine()->quote($table);
+        $query = "SELECT sql FROM sqlite_master WHERE type IN ('table', 'view') AND name = $tableName";
+        $tableQuery = $this->_engine()->result($query);
+
+        $indexes = array_filter($this->_engine()->indexes($table),
+            fn(string $indexName) => $indexName !== '', ARRAY_FILTER_USE_KEY);
+        $indexQueries = array_map(function($index, string $name) use($table) {
+            $escape = $this->_statement()->escapeId(...);
+            $columns = implode(', ', array_map($escape, $index->columns));
+
+            return $this->getCreateIndexQuery($table, $index->type, $name, "($columns)");
+        }, $indexes, array_keys($indexes));
+
+        return implode(";\n\n", [$tableQuery, ...$indexQueries]);
     }
 
     /**
@@ -120,9 +125,11 @@ class Table extends AbstractTable
      */
     public function getCreateIndexQuery(string $table, string $type, string $name, string $columns): string
     {
-        return "CREATE $type " . ($type != "INDEX" ? "INDEX " : "") .
-            $this->_statement()->escapeId($name != "" ? $name : uniqid($table . "_")) .
-            " ON " . $this->_statement()->escapeTableName($table) . " $columns";
+        $indexType = $type !== 'INDEX' ? "$type INDEX " : $type;
+        $indexName = $this->_statement()->escapeId($name !== '' ? $name : uniqid("{$table}_"));
+        $tableName = $this->_statement()->escapeTableName($table);
+
+        return "CREATE $indexType $indexName ON $tableName $columns";
     }
 
     /**
@@ -148,17 +155,15 @@ class Table extends AbstractTable
      */
     public function getAlterIndexQueries(string $table, array $alter, array $drop): array
     {
-        $queries = [];
-        foreach (array_reverse($drop) as $index) {
-            $queries[] = 'DROP INDEX ' . $this->_statement()->escapeId($index->name);
-        }
-        foreach (array_reverse($alter) as $index) {
-            // Can't alter primary keys
-            if ($index->type !== 'PRIMARY') {
-                $queries[] =  $this->_statement()->getCreateIndexQuery($table, $index->type,
-                    $index->name, '(' . implode(', ', $index->columns) . ')');
-            }
-        }
-        return $queries;
+        $dropCallback = fn($index) => 'DROP INDEX ' . $this->_statement()->escapeId($index->name);
+        $dropQueries = array_map($dropCallback, array_reverse($drop));
+
+        // Can't alter primary keys
+        $alterQueries = array_filter($alter, fn($index) => $index->type !== 'PRIMARY');
+        $alterCallback = fn($index) => $this->_statement()->getCreateIndexQuery($table,
+            $index->type, $index->name, '(' . implode(', ', $index->columns) . ')');
+        $alterQueries = array_map($alterCallback, array_reverse($alter));
+
+        return [...$dropQueries, ...$alterQueries];
     }
 }
