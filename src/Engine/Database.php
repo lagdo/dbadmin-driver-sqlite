@@ -3,15 +3,12 @@
 namespace Lagdo\DbAdmin\Driver\Sqlite\Engine;
 
 use Lagdo\DbAdmin\Driver\Exception\DbException;
-use Lagdo\DbAdmin\Driver\Sql\Connection\StatementInterface;
 use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractDatabase;
 use Lagdo\DbAdmin\Driver\Sqlite\Connection\Traits\ConfigTrait;
 use DirectoryIterator;
 use Exception;
 
 use function intval;
-use function is_a;
-use function is_object;
 use function preg_match;
 use function str_replace;
 use function unlink;
@@ -67,15 +64,13 @@ class Database extends AbstractDatabase
             return 0;
         }
         $pageSize = 0;
-        $statement = $connection->query('pragma page_size');
-        if (is_a($statement, StatementInterface::class) &&
-            ($row = $statement->fetchRow())) {
+        $result = $connection->executeQuery('pragma page_size');
+        if ($result->hasRowset() && ($row = $result->fetchRow())) {
             $pageSize = intval($row[0]);
         }
         $pageCount = 0;
-        $statement = $connection->query('pragma page_count');
-        if (is_a($statement, StatementInterface::class) &&
-            ($row = $statement->fetchRow())) {
+        $result = $connection->executeQuery('pragma page_count');
+        if ($result->hasRowset() && ($row = $result->fetchRow())) {
             $pageCount = intval($row[0]);
         }
         return $pageSize * $pageCount;
@@ -87,7 +82,7 @@ class Database extends AbstractDatabase
     public function databaseCollation(string $database, array $collations): string
     {
         // there is no database list so $database == $this->_engine()->database()
-        return $this->_engine()->result("PRAGMA encoding");
+        return $this->_engine()->columnValue("PRAGMA encoding");
     }
 
     /**
@@ -119,9 +114,9 @@ class Database extends AbstractDatabase
         }
         try {
             $connection = $this->_engine()->openNewConnection($database, '__create__'); // New connection
-            $connection->query('PRAGMA encoding = "UTF-8"');
-            $connection->query('CREATE TABLE dbadmin (i)'); // otherwise creates empty file
-            $connection->query('DROP TABLE dbadmin');
+            $connection->executeQuery('PRAGMA encoding = "UTF-8"');
+            $connection->executeQuery('CREATE TABLE dbadmin (i)'); // otherwise creates empty file
+            $connection->executeQuery('DROP TABLE dbadmin');
         } catch (Exception $ex) {
             throw new DbException($ex->getMessage());
         }
@@ -150,8 +145,8 @@ class Database extends AbstractDatabase
         foreach ($databases as $database) {
             $counts[$database] = 0;
             $connection = $this->_engine()->openNewConnection($database);
-            $statement = $connection->query($query);
-            if (is_object($statement) && ($row = $statement->fetchRow())) {
+            $result = $connection->executeQuery($query);
+            if ($result->hasRowset() && ($row = $result->fetchRow())) {
                 $counts[$database] = intval($row[0]);
             }
         }

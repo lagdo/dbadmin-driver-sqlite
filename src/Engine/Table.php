@@ -69,7 +69,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
      */
     public function supportForeignKeys(TableDto $tableStatus): bool
     {
-        return !$this->_engine()->result("SELECT sqlite_compileoption_used('OMIT_FOREIGN_KEY')");
+        return !$this->_engine()->columnValue("SELECT sqlite_compileoption_used('OMIT_FOREIGN_KEY')");
     }
 
     /**
@@ -163,7 +163,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
         $columns = $this->tableColumns($table);
 
         $tableName = $this->_engine()->quote($table);
-        $sql = $this->_engine()->result("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName");
+        $sql = $this->_engine()->columnValue("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName");
         $idf = '(("[^"]*+")+|[a-z0-9_]+)';
         $pattern = '~' . $idf . '\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i';
         preg_match_all($pattern, $sql ?? '', $matches, PREG_SET_ORDER);
@@ -194,7 +194,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
     {
         $tableName = $this->_engine()->quote($table);
         $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName";
-        $result = $this->_engine()->result($query) ?? '';
+        $result = $this->_engine()->columnValue($query) ?? '';
         if (preg_match('~\bPRIMARY\s+KEY\s*\((([^)"]+|"[^"]*"|`[^`]*`)++)~i', $result, $match)) {
             $primaryIndex = new IndexDto();
             $primaryIndex->type = "PRIMARY";
@@ -323,7 +323,7 @@ WHERE type = 'index' AND tbl_name = $tableName";
         $table = $this->_engine()->quote($status->name);
         $query = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $table";
         preg_match_all('~ CHECK *(\( *(((?>[^()]*[^() ])|(?1))*) *\))~',
-            $this->_engine()->result($query, 0) ?? '', $matches); //! could be inside a comment
+            $this->_engine()->columnValue($query, 0) ?? '', $matches); //! could be inside a comment
         return array_combine($matches[2], $matches[2]);
     }
 
@@ -390,7 +390,7 @@ WHERE type = 'index' AND tbl_name = $tableName";
         $options = $this->triggerOptions();
         preg_match("~^CREATE\\s+TRIGGER\\s*$idf\\s*(" . implode("|", $options["Timing"]) .
             ")\\s+([a-z]+)(?:\\s+OF\\s+($idf))?\\s+ON\\s*$idf\\s*(?:FOR\\s+EACH\\s+ROW\\s)?(.*)~is",
-            $this->_engine()->result("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
+            $this->_engine()->columnValue("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = " .
                 $this->_engine()->quote($name)), $match);
         $of = $match[3];
         return new TriggerDto(strtoupper($match[1]), strtoupper($match[2]), $match[4],

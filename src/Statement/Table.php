@@ -106,7 +106,7 @@ class Table extends AbstractTable
     {
         $tableName = $this->_engine()->quote($table);
         $query = "SELECT sql FROM sqlite_master WHERE type IN ('table', 'view') AND name = $tableName";
-        $tableQuery = $this->_engine()->result($query);
+        $tableQuery = $this->_engine()->columnValue($query);
 
         $indexes = array_filter($this->_engine()->indexes($table),
             fn(string $indexName) => $indexName !== '', ARRAY_FILTER_USE_KEY);

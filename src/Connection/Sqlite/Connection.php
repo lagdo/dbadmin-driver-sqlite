@@ -4,16 +4,17 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Connection\Sqlite;
 
 use Lagdo\DbAdmin\Driver\Sql\Connection\AbstractConnection;
 use Lagdo\DbAdmin\Driver\Sql\Connection\PreparedStatement;
-use Lagdo\DbAdmin\Driver\Sql\Connection\StatementInterface;
+use Lagdo\DbAdmin\Driver\Sql\Connection\QueryResultInterface;
 use Lagdo\DbAdmin\Driver\Sqlite\Connection\Traits\ConfigTrait;
 use Lagdo\DbAdmin\Driver\Sqlite\Connection\Traits\ConnectionTrait;
 use Exception;
 use SQLite3;
+use SQLite3Stmt;
 
-use function preg_match;
 use function is_array;
-use function unpack;
+use function preg_match;
 use function reset;
+use function unpack;
 
 class Connection extends AbstractConnection
 {
@@ -21,19 +22,28 @@ class Connection extends AbstractConnection
     use ConnectionTrait;
 
     /**
+     * The client object used to query the database driver
+     *
+     * @var SQLite3;
+     */
+    protected SQLite3 $client;
+
+    /**
      * @inheritDoc
      */
     public function open(string $database, string $schema = ''): bool
     {
-        $filename = $this->filename($database, $this->options);
-        $flags = $schema === '__create__' ? SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE : SQLITE3_OPEN_READWRITE;
         try {
+            $filename = $this->filename($database, $this->options);
+            $flags = $schema !== '__create__' ? SQLITE3_OPEN_READWRITE :
+                SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE;
             $this->client = new SQLite3($filename, $flags);
         } catch (Exception $ex) {
             $this->setError($ex->getMessage());
             return false;
         }
-        $this->query("PRAGMA foreign_keys = 1");
+
+        $this->executeQuery("PRAGMA foreign_keys = 1");
         return true;
     }
 
@@ -49,56 +59,41 @@ class Connection extends AbstractConnection
     /**
      * @inheritDoc
      */
-    public function query(string $query, bool $unbuffered = false): StatementInterface|bool
+    public function quote(string $string): string
+    {
+        $escape = $this->_utils()->str->isUtf8($string) ||
+            !is_array($unpacked = unpack('H*', $string));
+        return !$escape ? "x'" . reset($unpacked) . "'" :
+            "'" . $this->client->escapeString($string) . "'";
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function executeQuery(string $query, bool $unbuffered = false): QueryResultInterface
     {
         $space = $this->_utils()->str->spaceRegex();
         if (preg_match("~^$space*+ATTACH\\b~i", $query, $match)) {
             // PHP doesn't support setting SQLITE_LIMIT_ATTACHED
             $this->setError($this->_utils()->lang('ATTACH queries are not supported.'));
-            return false;
+            return new QueryResult(false);
         }
 
-        $result = @$this->client->query($query);
         $this->setError();
+
+        $result = @$this->client->query($query);
         if (!$result) {
             $this->setErrno($this->client->lastErrorCode());
             $this->setError($this->client->lastErrorMsg());
-            return false;
-        } elseif ($result->numColumns() > 0) {
-            return new Statement($result);
+            return new QueryResult(false);
         }
+
+        if ($result->numColumns() > 0) {
+            return new QueryResult($result);
+        }
+
         $this->setAffectedRows($this->client->changes());
-        return true;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function quote(string $string): string
-    {
-        if ($this->_utils()->str->isUtf8($string) || !is_array($unpacked = unpack('H*', $string))) {
-            return "'" . $this->client->escapeString($string) . "'";
-        }
-        return "x'" . reset($unpacked) . "'";
-    }
-
-    public function multiQuery(string $query): bool
-    {
-        $this->statement = $this->query($query);
-        return $this->statement !== false;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function storedResult(): StatementInterface|bool
-    {
-        return $this->statement;
-    }
-
-    public function nextResult(): mixed
-    {
-        return false;
+        return new QueryResult(true);
     }
 
     /**
@@ -108,24 +103,49 @@ class Connection extends AbstractConnection
     {
         [$params] = $this->getPreparedParams($query);
         $statement = $this->client->prepare($query);
-        return new PreparedStatement($query, $statement, $params);
+        return new PreparedStatement($statement, $query, $params);
     }
 
     /**
      * @inheritDoc
      */
-    public function executeStatement(PreparedStatement $statement,
-        array $values): ?StatementInterface
+    public function executeStatement(PreparedStatement $preparedStatement,
+        array $values): QueryResultInterface
     {
-        if (!$statement->prepared()) {
-            return null;
+        /** @var SQLite3Stmt|false */
+        $statement = $preparedStatement->statement();
+        if (!$statement) {
+            $this->setError($this->_utils()->lang($this->statementNotPrepared));
+            return new QueryResult(false);
         }
 
-        $values = $statement->paramValues($values, true);
+        $values = $preparedStatement->paramValues($values, true);
         foreach ($values as $name => $value) {
-            $statement->statement()->bindValue($name, $value);
+            $statement->bindValue($name, $value);
         }
-        $result = $statement->statement()->execute();
-        return !$result ? null : new Statement($result);
+        $result = $statement->execute();
+
+        return new QueryResult($result);
+    }
+
+    public function executeMultiQuery(string $query): QueryResultInterface
+    {
+        return $this->executeQuery($query);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function readRowset(QueryResultInterface $result): QueryResultInterface
+    {
+        return $result;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function nextRowset(QueryResultInterface $result): bool
+    {
+        return false;
     }
 }

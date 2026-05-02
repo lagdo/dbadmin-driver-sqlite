@@ -108,7 +108,7 @@ class Server extends AbstractServer
     {
         $variables = [];
         foreach ($this->variableNames as $key) {
-            $variables[$key] = $this->_engine()->result("PRAGMA $key");
+            $variables[$key] = $this->_engine()->columnValue("PRAGMA $key");
         }
         return $variables;
     }

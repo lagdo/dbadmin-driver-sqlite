@@ -21,7 +21,7 @@ class Connection extends AbstractConnection
             return false;
         }
 
-        $this->query('PRAGMA foreign_keys = 1');
+        $this->executeQuery('PRAGMA foreign_keys = 1');
         return true;
     }
 }

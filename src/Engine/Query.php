@@ -36,7 +36,7 @@ class Query extends AbstractQuery
             'type' => 'VIEW',
             'materialized' => false,
             'select' => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
-                $this->_engine()->result("SELECT sql FROM sqlite_master WHERE name = " .
+                $this->_engine()->columnValue("SELECT sql FROM sqlite_master WHERE name = " .
                 $this->_engine()->quote($name)))
         ]; //! identifiers may be inside []
     }
@@ -46,6 +46,6 @@ class Query extends AbstractQuery
      */
     public function lastAutoIncrementId(): string
     {
-        return $this->_engine()->result("SELECT LAST_INSERT_ROWID()");
+        return $this->_engine()->columnValue("SELECT LAST_INSERT_ROWID()");
     }
 }

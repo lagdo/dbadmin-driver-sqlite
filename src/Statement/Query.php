@@ -14,7 +14,7 @@ class Query extends AbstractQuery
     public function limitToOne(string $table, string $query, string $where): string
     {
         return preg_match('~^INTO~', $query) ||
-            $this->_engine()->result("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
+            $this->_engine()->columnValue("SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')") ?
             $this->getLimitClause($query, $where, 1, 0) :
             //! use primary key in tables with WITHOUT rowid
             " $query WHERE rowid = (SELECT rowid FROM " . $this->_statement()->escapeTableName($table) . $where . ' LIMIT 1)';
