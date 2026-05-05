@@ -2,6 +2,7 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
+use Lagdo\DbAdmin\Driver\Sql\Dto\AbstractTableDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnInputDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
@@ -17,16 +18,21 @@ use function uniqid;
 class Table extends AbstractTable
 {
     /**
-     * @param string $table
-     * @param int $autoIncrement
+     * @param AbstractTableDto $table
      *
      * @return string[]
      */
-    private function getAutoIncrementQueries(string $table, int $autoIncrement): array
+    private function getAutoIncrementQueries(AbstractTableDto $table): array
     {
+        $tableName = $this->_engine()->quote($table->name);
+        if ($table->autoIncrement <= 0) {
+            return [];
+        }
+
+        // Todo: execute the second only if the first updates no row.
         return [
-            "UPDATE sqlite_sequence SET seq = $autoIncrement WHERE name = $table",
-            "INSERT INTO sqlite_sequence (name, seq) VALUES ($table, $autoIncrement)",
+            "UPDATE sqlite_sequence SET seq = {$table->autoIncrement} WHERE name = $tableName",
+            "INSERT INTO sqlite_sequence (name, seq) VALUES ($tableName, {$table->autoIncrement})",
         ];
     }
 
@@ -37,19 +43,16 @@ class Table extends AbstractTable
     {
         // $useAllColumns = true;
 
-        $clauses = array_map(fn(ColumnInputDto $input) => $input->clauses(), $table->inputs['added']);
+        $clauses = array_map($this->getAddColumnClause(...), $table->columns['added']);
         $clauses = implode(",\n", [
             ...$clauses,
             ...$this->getForeignKeyClauses($table),
         ]);
-        $quotedTableName = $this->_engine()->quote($table->name);
-        $autoIncrementQueries = $table->autoIncrement <= 0 ? [] :
-            $this->getAutoIncrementQueries($quotedTableName, $table->autoIncrement);
 
         $tableName = $this->_statement()->escapeTableName($table->name);
         return [
             "CREATE TABLE $tableName (\n$clauses\n)",
-            ...$autoIncrementQueries,
+            ...$this->getAutoIncrementQueries($table),
         ];
     }
 
@@ -68,34 +71,39 @@ class Table extends AbstractTable
         // }
 
         $tableName = $this->_statement()->escapeTableName($table->name);
-        $queries = [];
-        foreach ($table->inputs['added'] as $input) {
-            $queries[] = "ALTER TABLE $tableName ADD " . $input->clauses();
-        }
-        foreach ($table->inputs['edited'] as $input) {
-            if ($input->name !== $input->column->name) {
-                $columnName = $this->_statement()->escapeId($input->column->name);
-                $queries[] = "ALTER TABLE $tableName RENAME $columnName TO {$input->name}";
-            }
-            // SQLite doesn't directly support other changes on a table structure.
-            // $queries[] = "ALTER TABLE $tableName " . $input->clauses();
-        }
-        foreach ($table->droppedColumns as $columnName) {
-            $columnName = $this->_statement()->escapeId($columnName);
-            $queries[] = "ALTER TABLE $tableName DROP $columnName";
-        }
-        if ($table->name !== $table->current->name) {
-            $currTableName = $this->_statement()->escapeTableName($table->current->name);
-            $queries[] = "ALTER TABLE $currTableName RENAME TO $tableName";
-        }
+        $addColumnCallback = fn(ColumnInputDto $input) =>
+            "ALTER TABLE $tableName ADD " . $this->getAddColumnClause($input);
+        $addColumnsQueries = array_map($addColumnCallback, $table->columns['added']);
 
-        $quotedTableName = $this->_engine()->quote($table->name);
-        $autoIncrementQueries = $table->autoIncrement <= 0 ? [] :
-            $this->getAutoIncrementQueries($quotedTableName, $table->autoIncrement);
+        // SQLite doesn't directly support other changes on a table structure.
+        // $queries[] = "ALTER TABLE $tableName " . $this->getAddColumnClause($input);
+        $renameColumnCallback = function(ColumnInputDto $input) use($tableName) {
+            $currName = $this->_statement()->escapeId($input->column->name);
+            $newName = $this->_statement()->escapeId($input->name);
+            return "ALTER TABLE $tableName RENAME $currName TO $newName";
+        };
+        $renameColumnsInputs = array_filter($table->columns['edited'],
+            fn(ColumnInputDto $input) => $input->name !== $input->column->name);
+        $renameColumnsQueries = array_map($renameColumnCallback, $renameColumnsInputs);
+
+        $dropColumnCallback = function(string $columnName) use($tableName) {
+            $columnName = $this->_statement()->escapeId($columnName);
+            return "ALTER TABLE $tableName DROP $columnName";
+        };
+        $dropColumnsQueries = array_map($dropColumnCallback, $table->columns['dropped']);
+
+        $tableQueries = [];
+        if ($table->name !== $table->current->name) {
+            $currName = $this->_statement()->escapeTableName($table->current->name);
+            $tableQueries[] = "ALTER TABLE $currName RENAME TO $tableName";
+        }
 
         return [
-            ...$queries,
-            ...$autoIncrementQueries,
+            ...$tableQueries,
+            ...$addColumnsQueries,
+            ...$renameColumnsQueries,
+            ...$dropColumnsQueries,
+            ...$this->getAutoIncrementQueries($table),
         ];
     }
 
@@ -145,8 +153,9 @@ class Table extends AbstractTable
      */
     public function getCreateTriggerQuery(string $table): string
     {
-        $query = "SELECT sql || ';;\n' FROM sqlite_master WHERE type = 'trigger' AND tbl_name = " .
-            $this->_engine()->quote($table);
+        $tableName = $this->_engine()->quote($table);
+        $query = "SELECT sql || ';;\n'
+FROM sqlite_master WHERE type = 'trigger' AND tbl_name = $tableName";
         return implode($this->_engine()->columnValues($query));
     }
 
@@ -164,6 +173,9 @@ class Table extends AbstractTable
             $index->type, $index->name, '(' . implode(', ', $index->columns) . ')');
         $alterQueries = array_map($alterCallback, array_reverse($alter));
 
-        return [...$dropQueries, ...$alterQueries];
+        return [
+            ...$dropQueries,
+            ...$alterQueries,
+        ];
     }
 }
