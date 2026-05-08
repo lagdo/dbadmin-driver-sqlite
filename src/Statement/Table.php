@@ -6,6 +6,7 @@ use Lagdo\DbAdmin\Driver\Sql\Dto\AbstractTableDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnInputDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\UpsertDto;
 use Lagdo\DbAdmin\Driver\Sql\Specific\Statement\AbstractTable;
 
 use function array_filter;
@@ -20,20 +21,19 @@ class Table extends AbstractTable
     /**
      * @param AbstractTableDto $table
      *
-     * @return string[]
+     * @return array<string|array<array<string>>>
      */
     private function getAutoIncrementQueries(AbstractTableDto $table): array
     {
-        $tableName = $this->_engine()->quote($table->name);
         if ($table->autoIncrement <= 0) {
             return [];
         }
 
-        // Todo: execute the second only if the first updates no row.
-        return [
-            "UPDATE sqlite_sequence SET seq = {$table->autoIncrement} WHERE name = $tableName",
-            "INSERT INTO sqlite_sequence (name, seq) VALUES ($tableName, {$table->autoIncrement})",
-        ];
+        $seqKeys = ['name' => [$this->_engine()->quote($table->name)]];
+        $setValues = ['seq' => ["{$table->autoIncrement}"]];
+        $upsert = new UpsertDto('sqlite_sequence', $seqKeys, $setValues);
+
+        return $this->_statement()->getTableUpsertQueries($upsert);
     }
 
     /**

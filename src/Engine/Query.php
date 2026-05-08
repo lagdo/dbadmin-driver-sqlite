@@ -4,8 +4,6 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Engine;
 
 use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractQuery;
 
-use function array_keys;
-use function implode;
 use function preg_replace;
 
 class Query extends AbstractQuery
@@ -13,31 +11,19 @@ class Query extends AbstractQuery
     /**
      * @inheritDoc
      */
-    // public function insertOrUpdate(string $table, array $rows, array $primary): bool
-    // {
-    //     $values = [];
-    //     foreach ($rows as $set) {
-    //         $values[] = "(" . implode(", ", $set) . ")";
-    //     }
-    //     $result = $this->_engine()->execute("REPLACE INTO " .
-    //         $this->_statement()->escapeTableName($table) . " (" .
-    //         implode(", ", array_keys(reset($rows))) .
-    //         ") VALUES\n" . implode(",\n", $values));
-    //     return $result !== false;
-    // }
-
-    /**
-     * @inheritDoc
-     */
     public function view(string $name): array
     {
+        $viewName = $this->_engine()->quote($name);
+        $query = "SELECT sql FROM sqlite_master WHERE name = $viewName";
+        // Remove unwanted chars.
+        $sqlCode = preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
+            $this->_engine()->columnValue($query));
+
         return [
             'name' => $name,
             'type' => 'VIEW',
             'materialized' => false,
-            'select' => preg_replace('~^(?:[^`"[]+|`[^`]*`|"[^"]*")* AS\s+~iU', '',
-                $this->_engine()->columnValue("SELECT sql FROM sqlite_master WHERE name = " .
-                $this->_engine()->quote($name)))
+            'select' => $sqlCode,
         ]; //! identifiers may be inside []
     }
 
