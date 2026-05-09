@@ -2,10 +2,10 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
-use Lagdo\DbAdmin\Driver\Sql\Dto\AbstractTableDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnInputDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\TableDdlDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\UpsertDto;
 use Lagdo\DbAdmin\Driver\Sql\Specific\Statement\AbstractTable;
 
@@ -19,11 +19,11 @@ use function uniqid;
 class Table extends AbstractTable
 {
     /**
-     * @param AbstractTableDto $table
+     * @param TableDdlDto $table
      *
      * @return array<string|array<array<string>>>
      */
-    private function getAutoIncrementQueries(AbstractTableDto $table): array
+    private function getAutoIncrementQueries(TableDdlDto $table): array
     {
         if ($table->autoIncrement <= 0) {
             return [];
