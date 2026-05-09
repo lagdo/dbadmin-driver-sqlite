@@ -2,6 +2,7 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
+use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnAction;
 use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnInputDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
@@ -43,7 +44,8 @@ class Table extends AbstractTable
     {
         // $useAllColumns = true;
 
-        $clauses = array_map($this->getAddColumnClause(...), $table->columns['added']);
+        $clauses = array_map($this->getAddColumnClause(...),
+            $table->columns[ColumnAction::ADD->value]);
         $clauses = implode(",\n", [
             ...$clauses,
             ...$this->getForeignKeyClauses($table),
@@ -73,7 +75,8 @@ class Table extends AbstractTable
         $tableName = $this->_statement()->escapeTableName($table->name);
         $addColumnCallback = fn(ColumnInputDto $input) =>
             "ALTER TABLE $tableName ADD " . $this->getAddColumnClause($input);
-        $addColumnsQueries = array_map($addColumnCallback, $table->columns['added']);
+        $addColumnsQueries = array_map($addColumnCallback,
+            $table->columns[ColumnAction::ADD->value]);
 
         // SQLite doesn't directly support other changes on a table structure.
         // $queries[] = "ALTER TABLE $tableName " . $this->getAddColumnClause($input);
@@ -82,7 +85,7 @@ class Table extends AbstractTable
             $newName = $this->_statement()->escapeId($input->name);
             return "ALTER TABLE $tableName RENAME $currName TO $newName";
         };
-        $renameColumnsInputs = array_filter($table->columns['edited'],
+        $renameColumnsInputs = array_filter($table->columns[ColumnAction::EDIT->value],
             fn(ColumnInputDto $input) => $input->name !== $input->column->name);
         $renameColumnsQueries = array_map($renameColumnCallback, $renameColumnsInputs);
 
@@ -90,7 +93,8 @@ class Table extends AbstractTable
             $columnName = $this->_statement()->escapeId($columnName);
             return "ALTER TABLE $tableName DROP $columnName";
         };
-        $dropColumnsQueries = array_map($dropColumnCallback, $table->columns['dropped']);
+        $dropColumnsQueries = array_map($dropColumnCallback,
+            $table->columns[ColumnAction::DROP->value]);
 
         $tableQueries = [];
         if ($table->name !== $table->current->name) {
