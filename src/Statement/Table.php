@@ -2,7 +2,6 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
-use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnAction;
 use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnInputDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
@@ -44,8 +43,7 @@ class Table extends AbstractTable
     {
         // $useAllColumns = true;
 
-        $clauses = array_map($this->getAddColumnClause(...),
-            $table->columns[ColumnAction::ADD->value]);
+        $clauses = array_map($this->getAddColumnClause(...), $table->addedColumns());
         $clauses = implode(",\n", [
             ...$clauses,
             ...$this->getForeignKeyClauses($table),
@@ -56,6 +54,42 @@ class Table extends AbstractTable
             "CREATE TABLE $tableName (\n$clauses\n)",
             ...$this->getAutoIncrementQueries($table),
         ];
+    }
+
+    /**
+     * @param string $tableName
+     * @param ColumnInputDto $input
+     *
+     * @return string
+     */
+    protected function getAddColumnQuery(string $tableName, ColumnInputDto $input): string
+    {
+        return "ALTER TABLE $tableName ADD " . $this->getAddColumnClause($input);
+    }
+
+    /**
+     * @param string $tableName
+     * @param ColumnInputDto $input
+     *
+     * @return string
+     */
+    protected function getEditColumnQuery(string $tableName, ColumnInputDto $input): string
+    {
+        $currName = $this->_statement()->escapeId($input->column->name);
+        $newName = $this->_statement()->escapeId($input->name);
+        return "ALTER TABLE $tableName RENAME $currName TO $newName";
+    }
+
+    /**
+     * @param TableAlterDto $table
+     *
+     * @return string
+     */
+    public function getRenameTableQuery(TableAlterDto $table): string
+    {
+        $newName = $this->_statement()->escapeTableName($table->name);
+        $currName = $this->_statement()->escapeTableName($table->current->name);
+        return "ALTER TABLE $currName RENAME TO $newName";
     }
 
     /**
@@ -73,39 +107,27 @@ class Table extends AbstractTable
         // }
 
         $tableName = $this->_statement()->escapeTableName($table->name);
+
         $addColumnCallback = fn(ColumnInputDto $input) =>
-            "ALTER TABLE $tableName ADD " . $this->getAddColumnClause($input);
-        $addColumnsQueries = array_map($addColumnCallback,
-            $table->columns[ColumnAction::ADD->value]);
+            $this->getAddColumnQuery($tableName, $input);
+        $addColumnsQueries = array_map($addColumnCallback, $table->addedColumns());
 
+        $alterColumnCallback = fn(ColumnInputDto $input) =>
+            $this->getEditColumnQuery($tableName, $input);
         // SQLite doesn't directly support other changes on a table structure.
-        // $queries[] = "ALTER TABLE $tableName " . $this->getAddColumnClause($input);
-        $renameColumnCallback = function(ColumnInputDto $input) use($tableName) {
-            $currName = $this->_statement()->escapeId($input->column->name);
-            $newName = $this->_statement()->escapeId($input->name);
-            return "ALTER TABLE $tableName RENAME $currName TO $newName";
-        };
-        $renameColumnsInputs = array_filter($table->columns[ColumnAction::EDIT->value],
-            fn(ColumnInputDto $input) => $input->name !== $input->column->name);
-        $renameColumnsQueries = array_map($renameColumnCallback, $renameColumnsInputs);
+        $changedColumns = array_filter($table->editedColumns(),
+            fn(ColumnInputDto $input) => $input->nameChanged());
+        $alterColumnsQueries = array_map($alterColumnCallback, $changedColumns);
 
-        $dropColumnCallback = function(string $columnName) use($tableName) {
-            $columnName = $this->_statement()->escapeId($columnName);
-            return "ALTER TABLE $tableName DROP $columnName";
-        };
-        $dropColumnsQueries = array_map($dropColumnCallback,
-            $table->columns[ColumnAction::DROP->value]);
+        $dropColumnsQueries = array_map(fn(string $clause) =>
+            "ALTER TABLE $tableName $clause", $this->getDropColumnClauses($table));
 
-        $tableQueries = [];
-        if ($table->name !== $table->current->name) {
-            $currName = $this->_statement()->escapeTableName($table->current->name);
-            $tableQueries[] = "ALTER TABLE $currName RENAME TO $tableName";
-        }
+        $tableQueries = $table->nameChanged() ? [$this->getRenameTableQuery($table)] : [];
 
         return [
             ...$tableQueries,
             ...$addColumnsQueries,
-            ...$renameColumnsQueries,
+            ...$alterColumnsQueries,
             ...$dropColumnsQueries,
             ...$this->getAutoIncrementQueries($table),
         ];

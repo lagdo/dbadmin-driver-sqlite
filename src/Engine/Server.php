@@ -7,6 +7,8 @@ use Lagdo\DbAdmin\Driver\Sql\Connection\AbstractConnection;
 use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractServer;
 use Lagdo\DbAdmin\Driver\Sqlite\Connection;
 
+use function array_combine;
+use function array_map;
 use function class_exists;
 use function count;
 use function explode;
@@ -47,8 +49,11 @@ class Server extends AbstractServer
             // "text" => ["date", "time", "datetime"],
             "text" => ["||"],
         ];
-        $this->config->features = ['check', 'columns', 'database', 'drop_col', 'dump', 'indexes', 'descidx',
-            'move_col', 'sql', 'status', 'table', 'trigger', 'variables', 'view', 'view_trigger'];
+        $this->config->features = [
+            'check', 'columns', 'database', 'drop_col', 'dump', 'indexes', 'descidx',
+            'move_col', 'sql', 'status', 'table', 'trigger', 'variables', 'view', 'view_trigger',
+            // Custom additions
+        ];
 
         // Regex to parse SQL statements in a text
         $this->config->sqlStatementRegex = '\\s*|[\'"`[]|/\*|-- |$';
@@ -97,8 +102,7 @@ class Server extends AbstractServer
      */
     public function collations(): array
     {
-        return $this->_utils()->input->hasTable() ?
-            $this->_engine()->columnValues("PRAGMA collation_list", 1) : [];
+        return $this->_engine()->columnValues("PRAGMA collation_list", 1);
     }
 
     /**
@@ -106,11 +110,9 @@ class Server extends AbstractServer
      */
     public function variables(): array
     {
-        $variables = [];
-        foreach ($this->variableNames as $key) {
-            $variables[$key] = $this->_engine()->columnValue("PRAGMA $key");
-        }
-        return $variables;
+        $getter = fn(string $variable) => $this->_engine()->columnValue("PRAGMA $variable");
+        $variables = array_map($getter, $this->variableNames);
+        return array_combine($this->variableNames, $variables);
     }
 
     /**
