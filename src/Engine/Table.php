@@ -11,7 +11,10 @@ use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractTable;
 
 use function array_combine;
 use function array_filter;
+use function array_map;
+use function count;
 use function implode;
+use function is_a;
 use function preg_match;
 use function preg_match_all;
 use function preg_quote;
@@ -49,7 +52,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
         $status->engine = $row['Engine'] ?? '';
         $status->oid = $row['Oid'];
         $status->hasAutoIncrement = $row['Auto_increment'] !== null;
-        $status->autoIncrement = $row['Auto_increment'] ?? 0;
+        $status->autoIncrementValue = $row['Auto_increment'] ?? 0;
         $query = 'SELECT COUNT(*) FROM ' . $this->_statement()->escapeId($row['Name']);
         $status->rowCount = (int)$this->_engine()->columnValue($query);
 
@@ -61,7 +64,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
      */
     public function isView(TableDto $tableStatus): bool
     {
-        return $tableStatus->engine == 'view';
+        return $tableStatus->engine === 'view';
     }
 
     /**
@@ -69,7 +72,8 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
      */
     public function supportForeignKeys(TableDto $tableStatus): bool
     {
-        return !$this->_engine()->columnValue("SELECT sqlite_compileoption_used('OMIT_FOREIGN_KEY')");
+        $query = "SELECT sqlite_compileoption_used('OMIT_FOREIGN_KEY')";
+        return !$this->_engine()->columnValue($query);
     }
 
     /**
@@ -127,29 +131,32 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
     }
 
     /**
-     * @param string $table
+     * @param string|TableDto $table
+     * @param string $tableName
      *
      * @return array<ColumnDto>
      */
-    private function tableColumns(string $table): array
+    private function tableColumns(string|TableDto $table, string $tableName): array
     {
-        $columns = [];
         $infoTableName = 'table_' . ($this->_engine()->minVersion(3.31) ? 'x' : '') . 'info';
-        $tableName = $this->_statement()->escapeTableName($table);
-        $rows = $this->_engine()->rows("PRAGMA $infoTableName($tableName)");
-        $primary = '';
-        foreach ($rows as $row) {
-            $column = $this->makeColumnDto($row);
-            if ($row['pk']) {
-                if ($primary != '') {
-                    $columns[$primary]->autoIncrement = false;
-                } elseif (preg_match('~^integer$~i', $column->fullType)) {
-                    $column->autoIncrement = true;
-                }
-                $primary = $column->name;
-            }
+        $tableName = $this->_statement()->escapeTableName($tableName);
 
-            $columns[$column->name] = $column;
+        $rows = $this->_engine()->rows("PRAGMA $infoTableName($tableName)");
+        $columns = array_map($this->makeColumnDto(...), $rows);
+        // Key by column name.
+        $columns = array_combine(array_map(fn($column) => $column->name, $columns), $columns);
+
+        if (is_a($table, TableDto::class)) {
+            // Set the auto increment only if there is a single
+            // column in the primary key, and it is an integer.
+            $primaryKeyRows = array_filter($rows, fn(array $row) => (bool)$row['pk']);
+            if (count($primaryKeyRows) === 1) {
+                $column = $columns[$rows[0]['name']];
+                if (preg_match('~^integer$~i', $column->fullType)) {
+                    $column->autoIncrement = true;
+                    $table->autoIncrementColumn = $column->name;
+                }
+            }
         }
 
         return $columns;
@@ -158,12 +165,14 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
     /**
      * @inheritDoc
      */
-    public function columns(string $table): array
+    public function columns(string|TableDto $table): array
     {
-        $columns = $this->tableColumns($table);
+        $tableName = is_a($table, TableDto::class) ? $table->name : $table;
+        $columns = $this->tableColumns($table, $tableName);
+        $tableName = $this->_engine()->quote($tableName);
 
-        $tableName = $this->_engine()->quote($table);
-        $sql = $this->_engine()->columnValue("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $tableName");
+        $sql = $this->_engine()->columnValue("SELECT sql FROM sqlite_master
+WHERE type = 'table' AND name = $tableName");
         $idf = '(("[^"]*+")+|[a-z0-9_]+)';
         $pattern = '~' . $idf . '\s+text\s+COLLATE\s+(\'[^\']+\'|\S+)~i';
         preg_match_all($pattern, $sql ?? '', $matches, PREG_SET_ORDER);
