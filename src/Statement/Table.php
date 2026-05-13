@@ -25,15 +25,42 @@ class Table extends AbstractTable
      */
     private function getAutoIncrementQueries(TableDdlDto $table): array
     {
-        if ($table->autoIncrement <= 0) {
+        $table->setupAutoIncrement();
+
+        if (!$table->autoIncrementDefined()) {
             return [];
         }
 
-        $seqKeys = ['name' => [$this->_engine()->quote($table->name)]];
-        $setValues = ['seq' => ["{$table->autoIncrement}"]];
-        $upsert = new UpsertDto('sqlite_sequence', $seqKeys, $setValues);
+        $queries = [];
 
-        return $this->_statement()->getTableUpsertQueries($upsert);
+        // Drop the current sequence.
+        if ($table->autoIncrementDisabled()) {
+            $tableName = $this->_engine()->quote($table->statusName());
+            $queries[] = "DELETE FROM sqlite_sequence WHERE name=$tableName";
+        }
+        // Create a new sequence.
+        if ($table->autoIncrementEnabled()) {
+            $autoIncrement = $table->hasAutoIncrement() ? $table->autoIncrement : 1;
+            $seqKeys = ['name' => [$this->_engine()->quote($table->name)]];
+            $setValues = ['seq' => ["{$autoIncrement}"]];
+            $upsert = new UpsertDto('sqlite_sequence', $seqKeys, $setValues);
+            $queries = [
+                ...$queries,
+                $this->_statement()->getTableUpsertQueries($upsert),
+            ];
+        }
+        // Just change the current auto increment value.
+        if ($table->autoIncrementValueChanged()) {
+            $seqKeys = ['name' => [$this->_engine()->quote($table->name)]];
+            $setValues = ['seq' => ["{$table->autoIncrement}"]];
+            $upsert = new UpsertDto('sqlite_sequence', $seqKeys, $setValues);
+            $queries = [
+                ...$queries,
+                $this->_statement()->getTableUpsertQueries($upsert),
+            ];
+        }
+
+        return $queries;
     }
 
     /**
@@ -88,7 +115,7 @@ class Table extends AbstractTable
     public function getRenameTableQuery(TableAlterDto $table): string
     {
         $newName = $this->_statement()->escapeTableName($table->name);
-        $currName = $this->_statement()->escapeTableName($table->current->name);
+        $currName = $this->_statement()->escapeTableName($table->status->name);
         return "ALTER TABLE $currName RENAME TO $newName";
     }
 

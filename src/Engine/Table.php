@@ -48,7 +48,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
      */
     private function makeStatus(array $row): TableDto
     {
-        $status = new TableDto($row['Name']);
+        $status = new TableDto($row['Name'], $this->_engine()->columns(...));
         $status->engine = $row['Engine'] ?? '';
         $status->oid = $row['Oid'];
         $status->hasAutoIncrement = $row['Auto_increment'] !== null;
@@ -218,7 +218,7 @@ WHERE type = 'table' AND name = $tableName");
 
         $primaryColumns = array_filter($this->columns($table),
             fn(ColumnDto $column) => $column->primary);
-        if (!$primaryColumns) {
+        if (count($primaryColumns) === 0) {
             return null;
         }
 
