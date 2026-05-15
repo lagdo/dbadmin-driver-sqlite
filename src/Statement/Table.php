@@ -46,7 +46,7 @@ class Table extends AbstractTable
             $upsert = new UpsertDto('sqlite_sequence', $seqKeys, $setValues);
             $queries = [
                 ...$queries,
-                $this->_statement()->getTableUpsertQueries($upsert),
+                ...$this->_statement()->getTableUpsertQueries($upsert),
             ];
         }
         // Just change the current auto increment value.
@@ -56,7 +56,7 @@ class Table extends AbstractTable
             $upsert = new UpsertDto('sqlite_sequence', $seqKeys, $setValues);
             $queries = [
                 ...$queries,
-                $this->_statement()->getTableUpsertQueries($upsert),
+                ...$this->_statement()->getTableUpsertQueries($upsert),
             ];
         }
 

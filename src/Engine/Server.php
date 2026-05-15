@@ -36,6 +36,7 @@ class Server extends AbstractServer
         $this->config->jush = 'sqlite';
         $this->config->drivers = ["SQLite3", "PDO_SQLite"];
         $this->config->types = [["integer" => 0, "real" => 0, "numeric" => 0, "text" => 0, "blob" => 0]];
+        $this->config->autoIncrementableTypes = ["integer"];
         // $this->config->unsigned = [];
         $this->config->operators = ["=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%",
             "IN", "IS NULL", "NOT LIKE", "NOT IN", "IS NOT NULL", "SQL"]; // REGEXP can be user defined function;
