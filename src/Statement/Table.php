@@ -19,6 +19,16 @@ use function uniqid;
 class Table extends AbstractTable
 {
     /**
+     * @inheritDoc
+     */
+    protected function getColumnModifier(ColumnInputDto $input, TableDdDto $table): string
+    {
+        $primaryKey = $this->getPrimaryKeyModifier($input, $table);
+        $autoIncrement = $input->autoIncrement ? ' AUTOINCREMENT' : '';
+        return "$primaryKey$autoIncrement";
+    }
+
+    /**
      * @param TableDdDto $table
      *
      * @return array<string|array<array<string>>>
@@ -27,7 +37,7 @@ class Table extends AbstractTable
     {
         $table->setupAutoIncrement();
 
-        if (!$table->autoIncrementDefined()) {
+        if (!$table->autoIncrementChanged()) {
             return [];
         }
 
@@ -70,15 +80,22 @@ class Table extends AbstractTable
     {
         // $useAllColumns = true;
 
-        $clauses = array_map($this->getAddColumnClause(...), $table->addedColumns());
-        $clauses = implode(",\n", [
+        $inputs = $table->addedColumns();
+        $clauses = array_map(fn(ColumnInputDto $input) =>
+            $this->getAddColumnClause($input, $table), $inputs);
+
+        if ($table->primaryKeyColumnCount() > 1) {
+            $clauses[] = $table->primaryKeyClause($this->_statement()->escapeId(...));
+        }
+
+        $clauses = implode(",\n  ", [
             ...$clauses,
             ...$this->getForeignKeyClauses($table),
         ]);
 
         $tableName = $this->_statement()->escapeTableName($table->name);
         return [
-            "CREATE TABLE $tableName (\n$clauses\n)",
+            "CREATE TABLE $tableName (\n  $clauses\n)",
             ...$this->getAutoIncrementQueries($table),
         ];
     }
@@ -86,12 +103,14 @@ class Table extends AbstractTable
     /**
      * @param string $tableName
      * @param ColumnInputDto $input
+     * @param TableAlterDto $table
      *
      * @return string
      */
-    protected function getAddColumnQuery(string $tableName, ColumnInputDto $input): string
+    private function getAddColumnQuery(string $tableName,
+        ColumnInputDto $input, TableAlterDto $table): string
     {
-        return "ALTER TABLE $tableName ADD " . $this->getAddColumnClause($input);
+        return "ALTER TABLE $tableName ADD " . $this->getAddColumnClause($input, $table);
     }
 
     /**
@@ -136,7 +155,7 @@ class Table extends AbstractTable
         $tableName = $this->_statement()->escapeTableName($table->name);
 
         $addColumnCallback = fn(ColumnInputDto $input) =>
-            $this->getAddColumnQuery($tableName, $input);
+            $this->getAddColumnQuery($tableName, $input, $table);
         $addColumnsQueries = array_map($addColumnCallback, $table->addedColumns());
 
         $alterColumnCallback = fn(ColumnInputDto $input) =>

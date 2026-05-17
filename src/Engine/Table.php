@@ -97,7 +97,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
      *
      * @return mixed|null
      */
-    private function defaultvalue(array $row)
+    private function defaultValue(array $row)
     {
         $default = $row['dflt_value'] ?? null;
         return match(true) {
@@ -122,7 +122,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
         $column->name = $row["name"];
         $column->type = $this->rowType($type);
         $column->fullType = $type;
-        $column->default = $this->defaultvalue($row);
+        $column->default = $this->defaultValue($row);
         $column->nullable = !$row["notnull"];
         $column->privileges = ["select" => 1, "insert" => 1, "update" => 1, "where" => 1, "order" => 1];
         $column->primary = $row["pk"];

@@ -35,14 +35,6 @@ class Database extends AbstractDatabase
     /**
      * @inheritDoc
      */
-    public function getAutoIncrementModifier(): string
-    {
-        return " PRIMARY KEY AUTOINCREMENT";
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function getDropViewsQueries(array $views): array
     {
         return array_map(fn(string $view) =>
