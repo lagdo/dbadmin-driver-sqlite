@@ -52,7 +52,7 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
         $status->engine = $row['Engine'] ?? '';
         $status->oid = $row['Oid'];
         $status->hasAutoIncrement = $row['Auto_increment'] !== null;
-        $status->autoIncrementValue = $row['Auto_increment'] ?? 0;
+        $status->autoIncrement = $row['Auto_increment'] ?? 0;
         $query = 'SELECT COUNT(*) FROM ' . $this->_statement()->escapeId($row['Name']);
         $status->rowCount = (int)$this->_engine()->columnValue($query);
 
@@ -154,7 +154,6 @@ FROM sqlite_master m WHERE type IN ('table', 'view') " .
                 $column = $columns[$rows[0]['name']];
                 if (preg_match('~^integer$~i', $column->fullType)) {
                     $column->autoIncrement = true;
-                    $table->autoIncrementColumn = $column->name;
                 }
             }
         }
