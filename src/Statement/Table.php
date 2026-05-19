@@ -2,7 +2,7 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
-use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnInputDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnDdDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableDdDto;
@@ -21,7 +21,7 @@ class Table extends AbstractTable
     /**
      * @inheritDoc
      */
-    protected function getColumnModifier(ColumnInputDto $input, TableDdDto $table): string
+    protected function getColumnModifier(ColumnDdDto $input, TableDdDto $table): string
     {
         $primaryKey = $this->getPrimaryKeyModifier($input, $table);
         $autoIncrement = $input->autoIncrement ? ' AUTOINCREMENT' : '';
@@ -81,7 +81,7 @@ class Table extends AbstractTable
         // $useAllColumns = true;
 
         $inputs = $table->addedColumns();
-        $clauses = array_map(fn(ColumnInputDto $input) =>
+        $clauses = array_map(fn(ColumnDdDto $input) =>
             $this->getAddColumnClause($input, $table), $inputs);
 
         if ($table->primaryKeyColumnCount() > 1) {
@@ -102,24 +102,24 @@ class Table extends AbstractTable
 
     /**
      * @param string $tableName
-     * @param ColumnInputDto $input
+     * @param ColumnDdDto $input
      * @param TableAlterDto $table
      *
      * @return string
      */
     private function getAddColumnQuery(string $tableName,
-        ColumnInputDto $input, TableAlterDto $table): string
+        ColumnDdDto $input, TableAlterDto $table): string
     {
         return "ALTER TABLE $tableName ADD " . $this->getAddColumnClause($input, $table);
     }
 
     /**
      * @param string $tableName
-     * @param ColumnInputDto $input
+     * @param ColumnDdDto $input
      *
      * @return string
      */
-    protected function getEditColumnQuery(string $tableName, ColumnInputDto $input): string
+    protected function getEditColumnQuery(string $tableName, ColumnDdDto $input): string
     {
         $currName = $this->_statement()->escapeId($input->column->name);
         $newName = $this->_statement()->escapeId($input->name);
@@ -154,15 +154,15 @@ class Table extends AbstractTable
 
         $tableName = $this->_statement()->escapeTableName($table->name);
 
-        $addColumnCallback = fn(ColumnInputDto $input) =>
+        $addColumnCallback = fn(ColumnDdDto $input) =>
             $this->getAddColumnQuery($tableName, $input, $table);
         $addColumnsQueries = array_map($addColumnCallback, $table->addedColumns());
 
-        $alterColumnCallback = fn(ColumnInputDto $input) =>
+        $alterColumnCallback = fn(ColumnDdDto $input) =>
             $this->getEditColumnQuery($tableName, $input);
         // SQLite doesn't directly support other changes on a table structure.
         $changedColumns = array_filter($table->editedColumns(),
-            fn(ColumnInputDto $input) => $input->nameChanged());
+            fn(ColumnDdDto $input) => $input->nameChanged());
         $alterColumnsQueries = array_map($alterColumnCallback, $changedColumns);
 
         $dropColumnsQueries = array_map(fn(string $clause) =>
