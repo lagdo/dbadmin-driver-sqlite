@@ -72,7 +72,7 @@ class Connection extends AbstractConnection
      */
     public function executeQuery(string $query, bool $unbuffered = false): QueryResultInterface
     {
-        $space = $this->_utils()->str->spaceRegex();
+        $space = $this->_engine()->spaceRegex();
         if (preg_match("~^$space*+ATTACH\\b~i", $query, $match)) {
             // PHP doesn't support setting SQLITE_LIMIT_ATTACHED
             $this->setError($this->_utils()->lang('ATTACH queries are not supported.'));
