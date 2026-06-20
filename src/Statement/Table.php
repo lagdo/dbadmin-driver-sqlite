@@ -44,12 +44,12 @@ class Table extends AbstractTable
         $queries = [];
 
         // Drop the current sequence.
-        if ($table->autoIncrementDisabled()) {
+        if ($table->autoIncrementRemoved()) {
             $tableName = $this->_engine()->quote($table->statusName());
             $queries[] = "DELETE FROM sqlite_sequence WHERE name=$tableName";
         }
         // Create a new sequence.
-        if ($table->autoIncrementEnabled()) {
+        if ($table->autoIncrementAdded()) {
             $autoIncrement = $table->hasAutoIncrement() ? $table->autoIncrement : 1;
             $seqKeys = ['name' => [$this->_engine()->quote($table->name)]];
             $setValues = ['seq' => ["{$autoIncrement}"]];
