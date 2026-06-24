@@ -388,7 +388,7 @@ WHERE type = 'index' AND tbl_name = $tableName";
     /**
      * @inheritDoc
      */
-    public function trigger(string $name, string $table = ''): TriggerDto|null
+    public function trigger(string $name, string $table): TriggerDto|null
     {
         if ($name == "") {
             return new TriggerDto('', '', "BEGIN\n\t;\nEND");

@@ -17,12 +17,12 @@ class Query extends AbstractQuery
     /**
      * @inheritDoc
      */
-    public function limitToOne(string $table, string $query, string $where): string
+    protected function limitToOne(string $table, string $query, string $where): string
     {
         $tableName = $this->_statement()->escapeTableName($table);
         $optSql = "SELECT sqlite_compileoption_used('ENABLE_UPDATE_DELETE_LIMIT')";
         return preg_match('~^INTO~', $query) || $this->_engine()->columnValue($optSql) ?
-            $this->getLimitClause($query, $where, 1, 0) :
+            $this->addLimitClause("$query$where", 1, 0) :
             //! use primary key in tables with WITHOUT rowid
             " $query WHERE rowid = (SELECT rowid FROM $tableName$where LIMIT 1)";
     }

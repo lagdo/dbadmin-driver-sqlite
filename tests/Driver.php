@@ -4,7 +4,6 @@ namespace Lagdo\DbAdmin\Driver\Sqlite\Tests;
 
 use Lagdo\DbAdmin\Driver\Utils\Str;
 use Lagdo\DbAdmin\Driver\Utils\Utils;
-use Lagdo\DbAdmin\Driver\Utils\Input;
 use Lagdo\DbAdmin\Driver\Tests\Db\Fake\DriverTrait;
 use Lagdo\DbAdmin\Driver\Tests\Db\Fake\Translator;
 use Lagdo\DbAdmin\Driver\Sqlite\Engine as SqliteDriver;
@@ -18,7 +17,7 @@ class Driver extends SqliteDriver
      */
     public function __construct()
     {
-        $utils = new Utils(new Translator(), new Input(), new Str());
+        $utils = new Utils(new Translator(), new Str());
         parent::__construct($utils, [
             'directory' => __DIR__ . '/databases',
         ]);
