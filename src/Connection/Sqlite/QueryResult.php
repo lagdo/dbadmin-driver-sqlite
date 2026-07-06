@@ -106,8 +106,8 @@ class QueryResult implements QueryResultInterface
         $column = $this->columnOffset++;
         $type = $this->result->columnType($column);
         $name = $this->result->columnName($column);
-        return !$type || !$name ? null :
-            new ResultColumnDto($type, $type === SQLITE3_BLOB, $name, $name);
+        $isBool = $type === SQLITE3_BLOB;
+        return !$name ? null : new ResultColumnDto($type ?: '', $isBool, $name, $name);
     }
 
     /**
