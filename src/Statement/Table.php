@@ -8,6 +8,7 @@ use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableDdDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\UpsertDto;
 use Lagdo\DbAdmin\Driver\Sql\Specific\Statement\AbstractTable;
+use Exception;
 
 use function array_filter;
 use function array_map;
@@ -35,8 +36,6 @@ class Table extends AbstractTable
      */
     private function getAutoIncrementQueries(TableDdDto $table): array
     {
-        $table->setupAutoIncrement();
-
         if (!$table->autoIncrementChanged()) {
             return [];
         }
@@ -78,7 +77,9 @@ class Table extends AbstractTable
      */
     public function getCreateTableQueries(TableCreateDto $table): array
     {
-        // $useAllColumns = true;
+        if ($table->name === '') {
+            throw new Exception($this->_utils()->lang('The table name must be defined.'));
+        }
 
         $inputs = $table->addedColumns();
         $clauses = array_map(fn(ColumnDdDto $input) =>
@@ -121,7 +122,7 @@ class Table extends AbstractTable
      */
     protected function getEditColumnQuery(string $tableName, ColumnDdDto $input): string
     {
-        $currName = $this->_statement()->escapeId($input->column->name);
+        $currName = $this->_statement()->escapeId($input->statusName());
         $newName = $this->_statement()->escapeId($input->name);
         return "ALTER TABLE $tableName RENAME $currName TO $newName";
     }
@@ -143,14 +144,12 @@ class Table extends AbstractTable
      */
     public function getAlterTableQueries(TableAlterDto $table): array
     {
-        // $useAllColumns = count($table->foreignKeys) > 0 || count($table->changedColumns) > 0;
-        // if (!$useAllColumns) {
-        //     foreach ($table->inputs['added'] as $input) {
-        //         if (!$input[1] || $input[2]) {
-        //             $useAllColumns = true;
-        //         }
-        //     }
-        // }
+        if ($table->name === '') {
+            throw new Exception($this->_utils()->lang('The table name must be defined.'));
+        }
+        if ($table->primaryKeyChanged()) {
+            throw new Exception($this->_utils()->lang('The primary key cannot be changed.'));
+        }
 
         $tableName = $this->_statement()->escapeTableName($table->name);
 
@@ -245,9 +244,6 @@ FROM sqlite_master WHERE type = 'trigger' AND tbl_name = $tableName";
             $index->type, $index->name, '(' . implode(', ', $index->columns) . ')');
         $alterQueries = array_map($alterCallback, array_reverse($alter));
 
-        return [
-            ...$dropQueries,
-            ...$alterQueries,
-        ];
+        return [...$dropQueries, ...$alterQueries];
     }
 }
