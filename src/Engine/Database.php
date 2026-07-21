@@ -2,7 +2,7 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Engine;
 
-use Lagdo\DbAdmin\Driver\Exception\DbException;
+use Lagdo\DbAdmin\Driver\Exception\DriverException;
 use Lagdo\DbAdmin\Driver\Sql\Specific\Engine\AbstractDatabase;
 use Lagdo\DbAdmin\Driver\Sqlite\Connection\Traits\ConfigTrait;
 use DirectoryIterator;
@@ -105,11 +105,11 @@ class Database extends AbstractDatabase
     {
         $options = $this->_engine()->options();
         if ($this->fileExists($database, $options)) {
-            throw new DbException($this->_utils()->lang('File exists.'));
+            throw new DriverException($this->_utils()->lang('File exists.'));
         }
         $filename = $this->filename($database, $options);
         if (!$this->validateName($filename)) {
-            throw new DbException($this->_utils()->lang('Please use one of the extensions %s.',
+            throw new DriverException($this->_utils()->lang('Please use one of the extensions %s.',
                 str_replace("|", ", ", $this->extensions)));
         }
         try {
@@ -118,7 +118,7 @@ class Database extends AbstractDatabase
             $connection->executeQuery('CREATE TABLE dbadmin (i)'); // otherwise creates empty file
             $connection->executeQuery('DROP TABLE dbadmin');
         } catch (Exception $ex) {
-            throw new DbException($ex->getMessage());
+            throw new DriverException($ex->getMessage());
         }
         return true;
     }
@@ -130,7 +130,7 @@ class Database extends AbstractDatabase
     {
         $filename = $this->filename($database, $this->_engine()->options());
         if (!@unlink($filename)) {
-            throw new DbException($this->_utils()->lang('File exists.'));
+            throw new DriverException($this->_utils()->lang('File exists.'));
         }
         return true;
     }

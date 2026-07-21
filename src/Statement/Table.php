@@ -2,7 +2,7 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
-use Lagdo\DbAdmin\Driver\Exception\DbException;
+use Lagdo\DbAdmin\Driver\Exception\DriverException;
 use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnDdDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\ForeignKeyDdDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
@@ -80,7 +80,7 @@ class Table extends AbstractTable
     public function getCreateTableQueries(TableCreateDto $table): array
     {
         if ($table->name === '') {
-            throw new DbException($this->_utils()->lang('The table name must be defined.'));
+            throw new DriverException($this->_utils()->lang('The table name must be defined.'));
         }
 
         $inputs = $table->addedColumns();
@@ -163,14 +163,14 @@ class Table extends AbstractTable
     public function getAlterTableQueries(TableAlterDto $table): array
     {
         if ($table->name === '') {
-            throw new DbException($this->_utils()->lang('The table name must be defined.'));
+            throw new DriverException($this->_utils()->lang('The table name must be defined.'));
         }
         if ($table->primaryKeyChanged()) {
-            throw new DbException($this->_utils()->lang('The primary key cannot be altered.'));
+            throw new DriverException($this->_utils()->lang('The primary key cannot be altered.'));
         }
         $filter = fn(ForeignKeyDdDto $fKey) => $fKey->edited() || $fKey->dropped();
         if (count(array_filter($table->foreignKeys, $filter)) > 0) {
-            throw new DbException($this->_utils()->lang('A foreign key cannot be altered or dropped.'));
+            throw new DriverException($this->_utils()->lang('A foreign key cannot be altered or dropped.'));
         }
 
         $tableName = $this->_statement()->escapeTableName($table->name);
