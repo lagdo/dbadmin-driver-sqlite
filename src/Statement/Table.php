@@ -2,18 +2,20 @@
 
 namespace Lagdo\DbAdmin\Driver\Sqlite\Statement;
 
+use Lagdo\DbAdmin\Driver\Exception\DbException;
 use Lagdo\DbAdmin\Driver\Sql\Dto\ColumnDdDto;
+use Lagdo\DbAdmin\Driver\Sql\Dto\ForeignKeyDdDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableAlterDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableCreateDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\TableDdDto;
 use Lagdo\DbAdmin\Driver\Sql\Dto\UpsertDto;
 use Lagdo\DbAdmin\Driver\Sql\Specific\Statement\AbstractTable;
-use Exception;
 
 use function array_filter;
 use function array_map;
 use function array_keys;
 use function array_reverse;
+use function count;
 use function implode;
 use function uniqid;
 
@@ -78,7 +80,7 @@ class Table extends AbstractTable
     public function getCreateTableQueries(TableCreateDto $table): array
     {
         if ($table->name === '') {
-            throw new Exception($this->_utils()->lang('The table name must be defined.'));
+            throw new DbException($this->_utils()->lang('The table name must be defined.'));
         }
 
         $inputs = $table->addedColumns();
@@ -140,15 +142,35 @@ class Table extends AbstractTable
     }
 
     /**
+    * @inheritDoc
+     */
+    protected function getDropPrimaryKeyClause(TableAlterDto $table): array
+    {
+        return [];
+    }
+
+    /**
+    * @inheritDoc
+     */
+    protected function getDeleteForeignKeyClauses(TableAlterDto $table): array
+    {
+        return [];
+    }
+
+    /**
      * @inheritDoc
      */
     public function getAlterTableQueries(TableAlterDto $table): array
     {
         if ($table->name === '') {
-            throw new Exception($this->_utils()->lang('The table name must be defined.'));
+            throw new DbException($this->_utils()->lang('The table name must be defined.'));
         }
         if ($table->primaryKeyChanged()) {
-            throw new Exception($this->_utils()->lang('The primary key cannot be changed.'));
+            throw new DbException($this->_utils()->lang('The primary key cannot be altered.'));
+        }
+        $filter = fn(ForeignKeyDdDto $fKey) => $fKey->edited() || $fKey->dropped();
+        if (count(array_filter($table->foreignKeys, $filter)) > 0) {
+            throw new DbException($this->_utils()->lang('A foreign key cannot be altered or dropped.'));
         }
 
         $tableName = $this->_statement()->escapeTableName($table->name);
