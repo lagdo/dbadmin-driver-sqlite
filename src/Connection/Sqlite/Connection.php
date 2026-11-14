@@ -24,9 +24,9 @@ class Connection extends AbstractConnection
     /**
      * The client object used to query the database driver
      *
-     * @var SQLite3;
+     * @var SQLite3|null;
      */
-    protected SQLite3 $client;
+    protected SQLite3|null $client = null;
 
     /**
      * @inheritDoc
@@ -40,11 +40,23 @@ class Connection extends AbstractConnection
             $this->client = new SQLite3($filename, $flags);
         } catch (Exception $ex) {
             $this->setError($ex->getMessage());
+            $this->client = null;
             return false;
         }
 
         $this->executeQuery("PRAGMA foreign_keys = 1");
         return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function close(): void
+    {
+        if ($this->client !== null) {
+            $this->client->close();
+            $this->client = null;
+        }
     }
 
     /**
